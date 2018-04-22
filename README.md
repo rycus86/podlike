@@ -49,13 +49,15 @@ services:
       - pod.container.cli-2: |
           image: alpine
           command: sh -c "sleep 1 && nc -z localhost 99 && echo OK"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 ```
 
 Or as a simple container for testing:
 
 ```shell
 docker run --name pltest --rm -it \
-    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro \
     --label abc=12 \
     --label pod.container.srv-1='image: alpine
 command: nc -p 99 -v -le sleep 3' \
