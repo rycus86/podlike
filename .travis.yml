@@ -1,0 +1,68 @@
+language: go
+go:
+  - "1.10"
+
+install: skip
+
+jobs:
+  include:
+    - stage: test
+      before_install:
+        - go get github.com/mattn/goveralls
+        - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        - chmod +x ./cc-test-reporter
+        - ./cc-test-reporter before-build
+        - npm install -g snyk
+      script:
+        - go test ./... -v -cover -covermode=count -coverprofile=c.out
+        # upload coverage stats
+        - $GOPATH/bin/goveralls -coverprofile=c.out -service=travis-ci || exit 0
+        - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT || exit 0
+        - snyk test
+      after_success:
+        - snyk monitor
+
+    - &deploy-stage
+      stage: build and deploy
+      sudo: required
+      script:
+        # build
+        - >
+          docker build -t podlike:$DOCKER_TAG -f Dockerfile \
+            --build-arg CC=$CC \
+            --build-arg CC_PKG=$CC_PKG \
+            --build-arg CC_GOARCH=$CC_GOARCH \
+            .
+      after_success:
+        - |
+          docker login -u="rycus86" -p="$DOCKER_PASSWORD"
+          if [ "$TRAVIS_BRANCH" == "master" ]; then
+              docker tag podlike:$DOCKER_TAG rycus86/podlike:$DOCKER_TAG
+              docker push rycus86/podlike:$DOCKER_TAG
+          fi
+      env:
+        - DOCKER_TAG=amd64
+
+    - <<: *deploy-stage
+      env:
+        - DOCKER_TAG=armhf
+        - CC=arm-linux-gnueabihf-gcc
+        - CC_PKG=gccgo-arm-linux-gnueabihf
+        - CC_GOARCH=arm
+
+    - <<: *deploy-stage
+      env:
+        - DOCKER_TAG=aarch64
+        - CC=aarch64-linux-gnu-gcc
+        - CC_PKG=gccgo-aarch64-linux-gnu
+        - CC_GOARCH=arm64
+
+    - stage: manifest
+      sudo: required
+      script:
+        - |
+        - docker login -u="rycus86" -p="${DOCKER_PASSWORD}"
+        - curl -fsSL https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64 > ./manifest-tool
+        - chmod +x ./manifest-tool
+        - ./manifest-tool push from-spec manifest.yml
+

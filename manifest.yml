@@ -1,0 +1,19 @@
+image: rycus86/podlike:latest
+manifests:
+  -
+    image: rycus86/podlike:amd64
+    platform:
+      architecture: amd64
+      os: linux
+  -
+    image: rycus86/podlike:armhf
+    platform:
+      architecture: arm
+      variant: v7
+      os: linux
+  -
+    image: rycus86/podlike:aarch64
+    platform:
+      architecture: arm64
+      variant: v8
+      os: linux
