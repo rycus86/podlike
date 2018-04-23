@@ -6,11 +6,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/rycus86/podlike/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"github.com/rycus86/podlike/config"
 )
 
 type verifyCreate struct {

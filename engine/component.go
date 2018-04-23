@@ -1,6 +1,9 @@
 package engine
 
 import (
+	"archive/tar"
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,18 +11,28 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
+	"github.com/docker/docker/client"
 	"github.com/mattn/go-shellwords"
 	"github.com/rycus86/podlike/config"
+	"io"
 	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 	"time"
 )
 
 type Component struct {
+	// the parent client to the engine
 	client *Client `yaml:"-"`
 
-	Image   string
-	Command string `yaml:"command,omitempty"`
+	// supported options
+	Image       string
+	Command     string            `yaml:"command,omitempty"`
+	Environment []string          `yaml:"environment,omitempty"`
+	Labels      map[string]string `yaml:"labels,omitempty"`
 
+	// the name and container ID set in runtime
 	Name        string `yaml:"-"`
 	containerID string `yaml:"-"`
 }
@@ -51,9 +64,44 @@ func (c *Component) warnForSettings() {
 func (c *Component) Start(configuration *config.Configuration) error {
 	fmt.Println("Starting component:", c.Name)
 
+	containerID, err := c.createContainer(configuration)
+	if err != nil {
+		return err
+	}
+
+	// save the container ID for later
+	c.containerID = containerID
+
+	if err := c.copyFilesIfNecessary(); err != nil {
+		return err
+	}
+
+	if err := c.startContainer(); err != nil {
+		return err
+	}
+
+	if configuration.StreamLogs {
+		go c.streamLogs()
+	}
+
+	fmt.Println("Component started:", c.Name)
+
+	return nil
+}
+
+func (c *Component) createContainer(configuration *config.Configuration) (string, error) {
 	parsedCommand, err := shellwords.Parse(c.Command)
 	if err != nil {
-		return nil
+		return "", err
+	}
+
+	name := c.client.container.Name + ".podlike." + c.Name
+
+	containerConfig := container.Config{
+		Image:  c.Image,
+		Cmd:    strslice.StrSlice(parsedCommand),
+		Env:    c.Environment,
+		Labels: c.Labels,
 	}
 
 	hostConfig := container.HostConfig{
@@ -76,30 +124,141 @@ func (c *Component) Start(configuration *config.Configuration) error {
 	defer cancelCreate()
 
 	created, err := c.client.api.ContainerCreate(ctxCreate,
-		&container.Config{
-			Image: c.Image,
-			Cmd:   strslice.StrSlice(parsedCommand),
-		},
+		&containerConfig,
 		&hostConfig,
 		&network.NetworkingConfig{},
-		c.client.container.Name+".podlike."+c.Name)
+		name)
 
 	if err != nil {
-		return err
+		if client.IsErrNotFound(err) {
+			fmt.Println("Pulling image:", c.Image)
+
+			if reader, err := c.client.api.ImagePull(context.Background(), c.Image, types.ImagePullOptions{}); err != nil {
+				return "", err
+			} else {
+				defer reader.Close()
+
+				ioutil.ReadAll(reader)
+			}
+
+			created, err = c.client.api.ContainerCreate(ctxCreate,
+				&containerConfig,
+				&hostConfig,
+				&network.NetworkingConfig{},
+				name)
+
+			if err != nil {
+				return "", err
+			} else {
+				return created.ID, nil
+			}
+		} else {
+			return "", err
+		}
+	} else {
+		// TODO handle warnings
+
+		return created.ID, nil
+	}
+}
+
+func (c *Component) copyFilesIfNecessary() error {
+	for key, value := range c.client.container.Config.Labels {
+		if strings.Index(key, "pod.copy.") >= 0 {
+			if target := strings.TrimPrefix(key, "pod.copy."); target != c.Name {
+				continue
+			}
+
+			// TODO error handling here
+			source := strings.Split(value, ":")[0]
+			target := strings.Split(value, ":")[1]
+
+			targetDir, targetFilename := path.Split(target)
+			reader, err := createTar(source, targetFilename)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Copying", source, "to", c.Name, "@", target, "...")
+
+			return c.client.api.CopyToContainer(
+				context.TODO(), c.containerID, targetDir, reader, types.CopyToContainerOptions{})
+		}
 	}
 
-	c.containerID = created.ID
+	return nil
+}
 
+func createTar(path, filename string) (io.Reader, error) {
+	var b bytes.Buffer
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	tw := tar.NewWriter(&b)
+	hdr := tar.Header{
+		Name: filename,
+		Mode: 0644,
+		Size: fi.Size(),
+	}
+	if err := tw.WriteHeader(&hdr); err != nil {
+		return nil, err
+	}
+
+	if _, err = tw.Write(contents); err != nil {
+		return nil, err
+	}
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+
+	return &b, nil
+}
+
+func (c *Component) streamLogs() {
+	if reader, err := c.client.api.ContainerLogs(context.Background(), c.containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	}); err == nil {
+		defer reader.Close()
+
+		fmt.Println("Streaming logs for", c.Name)
+
+		bufReader := bufio.NewReader(reader)
+		defer reader.Close()
+
+		for {
+			out, _, err := bufReader.ReadLine()
+			if err != nil {
+				if err != io.EOF {
+					fmt.Println("Stopped streaming logs for", c.Name, ":", err)
+				}
+				return
+			}
+
+			streamType := "out"
+			if out[0] == 2 {
+				streamType = "err"
+			}
+
+			fmt.Printf("[%s] %s: %s\n", streamType, c.Name, strings.TrimSpace(string(out[8:])))
+		}
+	}
+}
+
+func (c *Component) startContainer() error {
 	ctxStart, cancelStart := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancelStart()
 
-	if err = c.client.api.ContainerStart(ctxStart, created.ID, types.ContainerStartOptions{}); err != nil {
-		return err
-	}
-
-	fmt.Println("Component started:", c.Name)
-
-	return nil
+	return c.client.api.ContainerStart(ctxStart, c.containerID, types.ContainerStartOptions{})
 }
 
 func (c *Component) Stop() error {
@@ -118,8 +277,6 @@ func (c *Component) Stop() error {
 		// TODO what to do here?
 	}
 
-	c.printLogs()  // TODO get logs -- remove this
-
 	ctxRemove, cancelRemove := context.WithTimeout(context.Background(), 15*time.Second) // TODO should still fit in the wrapper grace period
 	defer cancelRemove()
 
@@ -132,22 +289,6 @@ func (c *Component) Stop() error {
 	}
 
 	return err
-}
-
-func (c *Component) printLogs() {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	if logs, err := c.client.api.ContainerLogs(ctx, c.containerID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     false,
-	}); err == nil {
-		defer logs.Close()
-
-		contents, _ := ioutil.ReadAll(logs)
-		fmt.Println("Logs:", string(contents))
-	}
 }
 
 func (c *Component) WaitFor(exitChan chan<- ComponentExited) {

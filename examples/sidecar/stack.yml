@@ -1,0 +1,29 @@
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      # sample app with HTML responses
+      pod.container.app: |
+        image: rycus86/demo-site
+        environment:
+          - HTTP_HOST=127.0.0.1
+          - HTTP_PORT=12000
+      # caching reverse proxy
+      pod.container.proxy: |
+        image: nginx:1.13.10
+      # copy the config file for the proxy
+      pod.copy.proxy: /var/conf/nginx.conf:/etc/nginx/conf.d/default.conf
+    configs:
+      - source: nginx-conf
+        target: /var/conf/nginx.conf
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 8080:80
+
+configs:
+  nginx-conf:
+    file: ./nginx.conf
