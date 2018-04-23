@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"github.com/rycus86/podlike/config"
 )
 
 type verifyCreate struct {
@@ -31,8 +32,8 @@ func TestOneComponent(t *testing.T) {
 
 	comp := components[0]
 
-	if comp.name != "single" {
-		t.Error("Invalid name:", comp.name)
+	if comp.Name != "single" {
+		t.Error("Invalid name:", comp.Name)
 	}
 
 	if comp.Image != "sample" {
@@ -73,13 +74,9 @@ command: echo test
 		t.Error("Failed to get components", err)
 	}
 
-	cid, err := components[0].Start()
+	err = components[0].Start(&config.Configuration{})
 	if err != nil {
 		t.Error(err)
-	}
-
-	if cid != "c0001" {
-		t.Error("Invalid container ID:", cid)
 	}
 }
 
