@@ -95,6 +95,12 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 		return "", err
 	}
 
+	if configuration.AlwaysPull {
+		if err := c.pullImage(); err != nil {
+			return "", err
+		}
+	}
+
 	name := c.client.container.Name + ".podlike." + c.Name
 
 	containerConfig := container.Config{
@@ -131,14 +137,8 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 
 	if err != nil {
 		if client.IsErrNotFound(err) {
-			fmt.Println("Pulling image:", c.Image)
-
-			if reader, err := c.client.api.ImagePull(context.Background(), c.Image, types.ImagePullOptions{}); err != nil {
+			if err := c.pullImage(); err != nil {
 				return "", err
-			} else {
-				defer reader.Close()
-
-				ioutil.ReadAll(reader)
 			}
 
 			created, err = c.client.api.ContainerCreate(ctxCreate,
@@ -159,6 +159,21 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 		// TODO handle warnings
 
 		return created.ID, nil
+	}
+}
+
+func (c *Component) pullImage() error {
+	fmt.Println("Pulling image:", c.Image)
+
+	// TODO is context.Background() appropriate here?
+	if reader, err := c.client.api.ImagePull(context.Background(), c.Image, types.ImagePullOptions{}); err != nil {
+		return err
+	} else {
+		defer reader.Close()
+
+		ioutil.ReadAll(reader)
+
+		return nil
 	}
 }
 
