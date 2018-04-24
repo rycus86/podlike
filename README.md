@@ -95,6 +95,12 @@ See the [examples folder](https://github.com/rycus86/podlike/tree/master/example
 
 This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
 
+I'm not yet sure how the components' containers will interfere with Swarm scheduling, resource allocation, etc. The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well (unless volume sharing is disabled with `-volumes=false`.
+
+Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
+
+Component reaping is done on a best-effort basis, killing the controller could leave you with zombie containers. With PID sharing enabled, it's somewhat mitigated, but you still end up having containers using memory and CPU after the controller dies. The components are also started with auto-remove, so getting information about them post-mortem might prove difficult.
+
 ## Work in progress
 
 Some of the open tasks are:
