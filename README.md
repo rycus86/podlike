@@ -1,7 +1,7 @@
 # Podlike
 
 An attempt at managing co-located containers (like in a Pod in Kubernetes) mainly for services on top of Docker Swarm mode.
-The general idea is the same: this container will act as a parent for the one or more children containers started as part of the "emulated" pod. Containers within this pod can use `localhost` (the loopback interface) to communicate with each other.
+The general idea is the same: this container will act as a parent for the one or more children containers started as part of the *emulated* pod. Containers within this pod can use `localhost` (the loopback interface) to communicate with each other.
 They can also share the same volumes, and can also see each other's PIDs, so sending UNIX signals between containers is possible.
 
 These are always shared:
@@ -43,33 +43,57 @@ For example:
 version: '3.5'
 services:
 
-  example:
+  pod:
     image: rycus86/podlike
+    command: -logs
     labels:
-      - pod.container.srv-1: |
-          image: alpine
-          command: nc -p 99 -v -le sleep 3
-      - pod.container.cli-2: |
-          image: alpine
-          command: sh -c "sleep 1 && nc -z localhost 99 && echo OK"
+      # sample app with HTML responses
+      pod.container.app: |
+        image: rycus86/demo-site
+        environment:
+          - HTTP_HOST=127.0.0.1
+          - HTTP_PORT=12000
+      # caching reverse proxy
+      pod.container.proxy: |
+        image: nginx:1.13.10
+      # copy the config file for the proxy
+      pod.copy.proxy: /var/conf/nginx.conf:/etc/nginx/conf.d/default.conf
+    configs:
+      - source: nginx-conf
+        target: /var/conf/nginx.conf
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 8080:80
+
+configs:
+  nginx-conf:
+    file: ./nginx.conf
+    # the actual configuration proxies requests from port 80 to 12000 on localhost
 ```
 
 Or as a simple container for testing:
 
 ```shell
-docker run --name pltest --rm -it \
-    -v /var/run/docker.sock:/var/run/docker.sock:ro \
-    --label abc=12 \
-    --label pod.container.srv-1='image: alpine
-command: nc -p 99 -v -le sleep 3' \
-    --label pod.container.cli-2='image: alpine
-command: sh -c "sleep 1 && nc -z localhost 99 && echo OK"' \
-    podlike
+$ docker run --rm -it --name podtest                      \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro       \
+    -v $PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro  \
+    --label pod.container.app='
+image: rycus86/demo-site
+environment:
+  - HTTP_HOST=127.0.0.1
+  - HTTP_PORT=12000'                                      \
+    --label pod.container.proxy='
+image: nginx:1.13.10'                                     \
+    -p 8080:80                                            \
+    rycus86/podlike -logs
 ```
 
-*Note:* the `rycus86/podlike` image is not published to Docker Hub yet.
+See the [examples folder](https://github.com/rycus86/podlike/tree/master/examples) with more, small example stacks.
+
+## Dragons!
+
+This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
 
 ## Work in progress
 
@@ -79,12 +103,12 @@ Some of the open tasks are:
 - [ ] Support for many-many more settings you can configure for the components' containers
 - [ ] CPU and Memory limit and reservation distribution within the pod
 - [ ] How does memory limit and reservation on the components affect Swarm scheduling
-- [ ] Do we want logs collected from the components
 - [ ] The stop grace period of the components should be smaller than the controller's
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
-- [ ] Sharing Swarm secrets and configs with the components
+- [x] Sharing Swarm secrets and configs with the components - copy on start
+- [x] Do we want logs collected from the components - now optional
 
 ## License
 
