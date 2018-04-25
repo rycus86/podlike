@@ -1,0 +1,59 @@
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    command: -logs -pids=true
+    # -pids is on by default, so could be omitted
+    # PID sharing can be disabled with -pids=false if ever needed
+    labels:
+      pod.container.hello: |
+        image: python:2.7-alpine
+        environment:
+          - PYTHONUNBUFFERED=1
+        command: |
+          python -c "
+          import os
+          import signal
+          import time
+
+          with open('/var/pids/hello', 'w') as pidfile:
+              print >> pidfile, os.getpid()
+
+          def hello(*args):
+              print 'Hello there!'
+
+          signal.signal(signal.SIGHUP, hello)
+
+          while True:
+              time.sleep(60)  # just wait here
+          "
+      pod.container.ping: |
+        image: python:2.7-alpine
+        environment:
+          - PYTHONUNBUFFERED=1
+        command: |
+          python -c "
+          import os
+          import time
+          import signal
+
+          while True:
+              time.sleep(1)
+
+              if not os.path.exists('/var/pids/hello'):
+                  continue
+
+              with open('/var/pids/hello', 'r') as pidfile:
+                  pid = int(pidfile.read())
+
+              print 'Ping!'
+              os.kill(pid, signal.SIGHUP)
+          "
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - pids:/var/pids
+
+volumes:
+  pids:
+

@@ -1,0 +1,64 @@
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    command: -logs -pids=true -volumes=true
+    # both -pids and -volumes are on by default, so could be omitted
+    # PID sharing can be disabled with -pids=false if ever needed
+    # similarly, volume sharing can be disabled with -volumes=false
+    labels:
+      pod.container.webserver: |
+        image: nginx:1.13.10
+      pod.container.reloader: |
+        image: python:2.7-alpine
+        command: |
+          python -c "
+          import os
+          import time
+          import signal
+          from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+          def generate_config(loc):
+              with open('/etc/nginx/conf.d/default.conf', 'w') as conf:
+                  conf.write('''
+                  server {
+                      listen 80;
+                      server_name localhost;
+
+                      location / {
+                          return 200 'Reloaded from %s at %s\\n';
+                          add_header Content-Type text/plain;
+                      }
+                  }''' % (loc, time.ctime()))
+
+              with open('/var/run/nginx.pid') as pidfile:
+                  pid = int(pidfile.read())
+
+              # send a reload signal to Nginx now
+              os.kill(pid, signal.SIGHUP)
+
+              return pid
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  pid = generate_config(self.path)
+
+                  self.send_response(200)
+                  self.end_headers()
+                  self.wfile.write('OK, Nginx reloaded with pid: %d\\n' % pid)
+                  self.wfile.write('My pid is: %d\\n' % os.getpid())
+
+          HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+          "
+    ports:
+      - 8000:80
+      - 5000:5000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - pids:/var/run
+      - nginx-config:/etc/nginx/conf.d
+
+volumes:
+  pids:
+  nginx-config:

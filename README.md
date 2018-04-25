@@ -29,9 +29,13 @@ You may want to always deploy an application with a supporting application, a si
 
 By putting containers in the same PID namespace, you send UNIX signals from one to another. Maybe an internal-only small webapp, that sends a SIGHUP to Nginx when it receives a reload request.
 
+*See also the [signal example](https://github.com/rycus86/podlike/tree/master/examples/signal)*
+
 3. Shared temporary storage
 
 By sharing a local volume for multiple containers, one could generate configuration for another to use, for example. Combined with singal sending, you could also ask the other app to reload it, when it is written and ready.
+
+*See also the [volume example](https://github.com/rycus86/podlike/tree/master/examples/volume)*
 
 ## Configuration
 
