@@ -16,5 +16,5 @@ You can follow the logs with this:
 $ docker service logs -f signal_pod
 ```
 
-Or try it on the [Docker Playground](https://play-with-docker.com/?stack=https://raw.githubusercontent.com/rycus86/podlike/master/examples/signal/stack.yml&stack_name=signal).
+Or try it on the [Docker Playground](https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/rycus86/podlike/master/examples/signal/stack.yml&stack_name=signal).
 

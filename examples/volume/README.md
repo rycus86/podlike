@@ -31,5 +31,5 @@ $ curl -fs http://127.0.0.1:8000/
 Reloaded from /update at Wed Apr 25 17:26:15 2018
 ```
 
-Or try it on the [Docker Playground](https://play-with-docker.com/?stack=https://raw.githubusercontent.com/rycus86/podlike/master/examples/volume/stack.yml&stack_name=volume).
+Or try it on the [Docker Playground](https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/rycus86/podlike/master/examples/volume/stack.yml&stack_name=volume).
 
