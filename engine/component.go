@@ -28,9 +28,15 @@ type Component struct {
 
 	// supported options
 	Image       string
-	Command     string            `yaml:"command,omitempty"`
-	Environment []string          `yaml:"environment,omitempty"`
-	Labels      map[string]string `yaml:"labels,omitempty"`
+	Entrypoint  string
+	Command     string
+	WorkingDir  string `yaml:"working_dir"`
+	Environment []string
+	Labels      map[string]string
+	Tty         bool
+	StopSignal  string `yaml:"stop_signal"`
+	StopTimeout *int `yaml:"stop_timeout"`
+	// TODO HealthChecks
 
 	// the name and container ID set in runtime
 	Name        string `yaml:"-"`
@@ -104,10 +110,15 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 	name := c.client.container.Name + ".podlike." + c.Name
 
 	containerConfig := container.Config{
-		Image:  c.Image,
-		Cmd:    strslice.StrSlice(parsedCommand),
-		Env:    c.Environment,
-		Labels: c.Labels,
+		Image:       c.Image,
+		// Entrypoint:  c.Entrypoint,  // TODO slice
+		Cmd:         strslice.StrSlice(parsedCommand),
+		WorkingDir:  c.WorkingDir,
+		Env:         c.Environment,
+		Labels:      c.Labels,
+		Tty:         c.Tty,
+		StopSignal:  c.StopSignal,
+		StopTimeout: c.StopTimeout,
 	}
 
 	hostConfig := container.HostConfig{
