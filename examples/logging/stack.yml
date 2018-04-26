@@ -1,0 +1,58 @@
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    command: -logs -volumes=true
+    # -volumes is on by default, so could be omitted
+    # to disable volume sharing, use -volumes=false
+    labels:
+      pod.container.logger: |
+        image: python:2.7-alpine
+        command: |
+          python -c "
+          import time
+          import signal
+          import logging
+
+          logging.basicConfig(
+              filename='/var/log/example.log',
+              format='%(asctime)s [%(levelname)s] %(message)s'
+          )
+          logger = logging.getLogger('example')
+          logger.setLevel(logging.INFO)
+
+          class State(object):
+              keep_running = True
+
+              @classmethod
+              def stop(cls, *args, **kwargs):
+                  cls.keep_running = False
+          
+          signal.signal(signal.SIGINT, State.stop)        
+          signal.signal(signal.SIGTERM, State.stop)        
+
+          print '>>> Starting...'
+
+          counter = 0
+
+          while State.keep_running:
+              time.sleep(1)
+              logger.info('Still running...')
+
+              counter += 1
+
+              if counter % 3 == 0:
+                  logger.warn('Could stop for a bit now...')
+
+          print '>>> OK, bye!'
+          "
+      pod.container.tail: |
+        image: alpine
+        command: tail -F /var/log/example.log
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - logs:/var/log
+
+volumes:
+  logs:

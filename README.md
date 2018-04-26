@@ -31,7 +31,13 @@ By putting containers in the same PID namespace, you send UNIX signals from one 
 
 *See also the [signal example](https://github.com/rycus86/podlike/tree/master/examples/signal)*
 
-3. Shared temporary storage
+3. Log collectors
+
+With two containers sharing a local volume, you could collect and forward logs from files, that another container is writing. Maybe you have a legacy application with fixed file logging, but you'd still want to use modern log forwarders, like Fluentd.
+
+*See also the [logging example](https://github.com/rycus86/podlike/tree/master/examples/logging)*
+
+4. Shared volume and signals
 
 By sharing a local volume for multiple containers, one could generate configuration for another to use, for example. Combined with singal sending, you could also ask the other app to reload it, when it is written and ready.
 
@@ -109,7 +115,6 @@ Component reaping is done on a best-effort basis, killing the controller could l
 
 Some of the open tasks are:
 
-- [ ] Small usage examples
 - [ ] Support for many-many more settings you can configure for the components' containers
 - [ ] CPU and Memory limit and reservation distribution within the pod
 - [ ] How does memory limit and reservation on the components affect Swarm scheduling
@@ -117,6 +122,7 @@ Some of the open tasks are:
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
+- [x] Small usage examples
 - [x] Sharing Swarm secrets and configs with the components - copy on start
 - [x] Do we want logs collected from the components - now optional
 
