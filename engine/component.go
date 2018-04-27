@@ -23,20 +23,26 @@ import (
 )
 
 type Component struct {
+	// supported options
+	Image           string
+	Entrypoint      interface{}
+	Command         interface{}
+	WorkingDir      string `yaml:"working_dir"`
+	Environment     []string
+	Labels          map[string]string
+	Tty             bool
+	StopSignal      string        `yaml:"stop_signal"`
+	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
+	HealthCheck     *struct {
+		Test        interface{}
+		Interval    time.Duration
+		Timeout     time.Duration
+		StartPeriod time.Duration `yaml:"start_period"`
+		Retries     int
+	} `yaml:"healthcheck"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
-
-	// supported options
-	Image       string
-	Entrypoint  string
-	Command     string
-	WorkingDir  string `yaml:"working_dir"`
-	Environment []string
-	Labels      map[string]string
-	Tty         bool
-	StopSignal  string `yaml:"stop_signal"`
-	StopTimeout *int `yaml:"stop_timeout"`
-	// TODO HealthChecks
 
 	// the name and container ID set in runtime
 	Name        string `yaml:"-"`
@@ -96,7 +102,12 @@ func (c *Component) Start(configuration *config.Configuration) error {
 }
 
 func (c *Component) createContainer(configuration *config.Configuration) (string, error) {
-	parsedCommand, err := shellwords.Parse(c.Command)
+	entrypoint, err := asStrSlice(c.Entrypoint)
+	if err != nil {
+		return "", nil
+	}
+
+	command, err := asStrSlice(c.Command)
 	if err != nil {
 		return "", err
 	}
@@ -110,15 +121,19 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 	name := c.client.container.Name + ".podlike." + c.Name
 
 	containerConfig := container.Config{
-		Image:       c.Image,
-		// Entrypoint:  c.Entrypoint,  // TODO slice
-		Cmd:         strslice.StrSlice(parsedCommand),
-		WorkingDir:  c.WorkingDir,
-		Env:         c.Environment,
-		Labels:      c.Labels,
-		Tty:         c.Tty,
-		StopSignal:  c.StopSignal,
-		StopTimeout: c.StopTimeout,
+		Image:      c.Image,
+		Entrypoint: entrypoint,
+		Cmd:        command,
+		WorkingDir: c.WorkingDir,
+		Env:        c.Environment,
+		Labels:     c.Labels,
+		Tty:        c.Tty,
+		StopSignal: c.StopSignal,
+	}
+
+	if c.StopGracePeriod.Seconds() > 0 {
+		stopTimeoutSeconds := int(c.StopGracePeriod.Seconds())
+		containerConfig.StopTimeout = &stopTimeoutSeconds
 	}
 
 	hostConfig := container.HostConfig{
@@ -170,6 +185,24 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 		// TODO handle warnings
 
 		return created.ID, nil
+	}
+}
+
+func asStrSlice(value interface{}) (strslice.StrSlice, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	stringValue, ok := value.(string)
+	if ok {
+		return shellwords.Parse(stringValue)
+	}
+
+	sliceValue, ok := value.([]string)
+	if ok {
+		return sliceValue, nil
+	} else {
+		return nil, errors.New(fmt.Sprintf("invalid string or slice: %T %+v", value, value))
 	}
 }
 
