@@ -22,40 +22,6 @@ import (
 	"time"
 )
 
-type Component struct {
-	// supported options
-	Image           string
-	Entrypoint      interface{}
-	Command         interface{}
-	WorkingDir      string `yaml:"working_dir"`
-	Environment     []string
-	Labels          map[string]string
-	Tty             bool
-	StopSignal      string        `yaml:"stop_signal"`
-	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
-	HealthCheck     *struct {
-		Test        interface{}
-		Interval    time.Duration
-		Timeout     time.Duration
-		StartPeriod time.Duration `yaml:"start_period"`
-		Retries     int
-	} `yaml:"healthcheck"`
-
-	// the parent client to the engine
-	client *Client `yaml:"-"`
-
-	// the name and container ID set in runtime
-	Name        string `yaml:"-"`
-	containerID string `yaml:"-"`
-}
-
-type ComponentExited struct {
-	Component *Component
-
-	StatusCode int64
-	Error      error
-}
-
 func (c *Component) init(name string, client *Client) {
 	c.Name = name
 	c.client = client
@@ -139,7 +105,7 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 	hostConfig := container.HostConfig{
 		AutoRemove: true,
 
-		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
+		Cgroup:      container.CgroupSpec(c.client.cgroup),
 		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
 		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
 	}

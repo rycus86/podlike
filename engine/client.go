@@ -11,11 +11,6 @@ import (
 	"time"
 )
 
-type Client struct {
-	api       *client.Client
-	container *types.ContainerJSON
-}
-
 func (c *Client) GetComponents() ([]*Component, error) {
 	var components []*Component
 
@@ -42,12 +37,17 @@ func (c *Client) Close() error {
 }
 
 func NewClient() (*Client, error) {
+	cgroup := getOwnCgroup()
+	if cgroup == "" {
+		return nil, errors.New("the application does not appear to be running in a container")
+	}
+
 	cli, err := client.NewClientWithOpts(client.WithVersion(""))
 	if err != nil {
 		return nil, err
 	}
 
-	container, err := getOwnContainer(cli)
+	container, err := getOwnContainer(cli, cgroup)
 	if err != nil {
 		cli.Close()
 		return nil, err
@@ -55,25 +55,30 @@ func NewClient() (*Client, error) {
 
 	return &Client{
 		api:       cli,
+		cgroup:    cgroup,
 		container: container,
 	}, nil
 }
 
-func getOwnContainer(c *client.Client) (*types.ContainerJSON, error) {
-	contents, err := ioutil.ReadFile("/proc/1/cgroup")
+func getOwnCgroup() string {
+	contents, err := ioutil.ReadFile("/proc/self/cgroup")
 	if err != nil {
-		return nil, err
+		return ""
 	}
-
-	id := ""
 
 	for _, line := range strings.Split(string(contents), "\n") {
-		if strings.Contains(line, "docker/") {
-			parts := strings.Split(line, "/")
-			id = parts[len(parts)-1]
-			break
+		parts := strings.Split(line, ":")
+		if len(parts) == 3 {
+			return parts[2]
 		}
 	}
+
+	return ""
+}
+
+func getOwnContainer(c *client.Client, cgroup string) (*types.ContainerJSON, error) {
+	parts := strings.Split(cgroup, "/")
+	id := parts[len(parts)-1]
 
 	if id == "" {
 		return nil, errors.New("the application does not appear to be running in a container")
