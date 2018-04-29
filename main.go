@@ -6,6 +6,7 @@ import (
 	"github.com/rycus86/podlike/engine"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -16,12 +17,6 @@ func run(components []*engine.Component) {
 		configuration = config.Parse()
 	)
 
-	done := func() {
-		for _, comp := range components {
-			comp.Stop()
-		}
-	}
-
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	for _, component := range components {
@@ -29,7 +24,7 @@ func run(components []*engine.Component) {
 		if err != nil {
 			fmt.Println("Failed to start", component.Name, ":", err)
 
-			done()
+			done(components)
 			return
 		}
 
@@ -50,17 +45,34 @@ func run(components []*engine.Component) {
 				fmt.Println(" Status:", exit.StatusCode)
 			}
 
-			done()
+			done(components)
 			return
 
 		case <-signalChan:
 			fmt.Println("Exiting...")
 
-			done()
+			done(components)
 			return
 
 		}
 	}
+}
+
+func done(components []*engine.Component) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(components))
+
+	for _, comp := range components {
+		item := comp
+
+		go func() {
+			item.Stop()
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 }
 
 func main() {

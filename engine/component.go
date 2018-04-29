@@ -105,7 +105,11 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 	hostConfig := container.HostConfig{
 		AutoRemove: true,
 
-		Cgroup:      container.CgroupSpec(c.client.cgroup),
+		Resources: container.Resources{
+			CgroupParent: c.client.cgroup,
+		},
+
+		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
 		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
 		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
 	}
@@ -293,27 +297,60 @@ func (c *Component) Stop() error {
 		return errors.New("Container is not running for component: " + c.Name)
 	}
 
-	ctxStop, cancelStop := context.WithTimeout(context.Background(), 15*time.Second) // TODO stop grace period + extra
-	defer cancelStop()
+	stopError := c.stopContainer()
+	removeError := c.removeContainer()
 
-	err := c.client.api.ContainerStop(ctxStop, c.containerID, nil) // TODO stop grace period here or on create?
+	if removeError != nil {
+		return removeError
+	} else {
+		return stopError
+	}
+}
+
+func (c *Component) stopContainer() error {
+	var (
+		contextTimeout time.Duration
+		stopTimeout    *time.Duration
+	)
+	if c.StopGracePeriod > 0 {
+		contextTimeout = c.StopGracePeriod + 1*time.Second
+		stopTimeout = &c.StopGracePeriod
+	} else {
+		contextTimeout = 10 * time.Second
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	err := c.client.api.ContainerStop(ctx, c.containerID, stopTimeout)
 	if err != nil {
 		fmt.Println("Failed to stop the container:", err)
 		// TODO what to do here?
 	}
 
-	ctxRemove, cancelRemove := context.WithTimeout(context.Background(), 15*time.Second) // TODO should still fit in the wrapper grace period
-	defer cancelRemove()
+	return err
+}
 
-	err = c.client.api.ContainerRemove(ctxRemove, c.containerID, types.ContainerRemoveOptions{
+func (c *Component) removeContainer() error {
+	err := c.client.api.ContainerRemove(context.Background(), c.containerID, types.ContainerRemoveOptions{
 		Force: true,
 	})
 
 	if err != nil {
-		fmt.Println("Failed to remove the container:", err)
+		if !c.isRemovalInProgressError(err) {
+			fmt.Println("Failed to remove the container:", err)
+		}
 	}
 
 	return err
+}
+
+func (c *Component) isRemovalInProgressError(err error) bool {
+	// TODO feels a bit hacky
+	return strings.Contains(
+		err.Error(),
+		fmt.Sprintf("removal of container %s is already in progress", c.containerID),
+	)
 }
 
 func (c *Component) WaitFor(exitChan chan<- ComponentExited) {

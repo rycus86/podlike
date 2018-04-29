@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"gopkg.in/yaml.v2"
@@ -47,6 +48,24 @@ func NewClient() (*Client, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	version, err := cli.ServerVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Using API version:", version.APIVersion)
+
+	// close
+	cli.Close()
+	// and reopen with the actual API version
+	cli, err = client.NewClientWithOpts(client.WithVersion(version.APIVersion))
+	if err != nil {
+		return nil, err
+	}
+
 	container, err := getOwnContainer(cli, cgroup)
 	if err != nil {
 		cli.Close()
@@ -68,7 +87,7 @@ func getOwnCgroup() string {
 
 	for _, line := range strings.Split(string(contents), "\n") {
 		parts := strings.Split(line, ":")
-		if len(parts) == 3 {
+		if len(parts) == 3 && parts[0] == "1" {
 			return parts[2]
 		}
 	}
