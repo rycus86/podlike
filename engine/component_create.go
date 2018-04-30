@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-units"
 	"github.com/mattn/go-shellwords"
 	"github.com/rycus86/podlike/config"
 	"io"
@@ -22,23 +23,72 @@ import (
 )
 
 func (c *Component) createContainer(configuration *config.Configuration) (string, error) {
-	entrypoint, err := asStrSlice(c.Entrypoint)
-	if err != nil {
-		return "", nil
-	}
-
-	command, err := asStrSlice(c.Command)
-	if err != nil {
-		return "", err
-	}
-
 	if configuration.AlwaysPull {
 		if err := c.pullImage(); err != nil {
 			return "", err
 		}
 	}
 
+	containerConfig, err := c.newContainerConfig()
+	if err != nil {
+		return "", err
+	}
+
+	hostConfig, err := c.newHostConfig(configuration)
+	if err != nil {
+		return "", err
+	}
+
 	name := c.client.container.Name + ".podlike." + c.Name
+
+	ctxCreate, cancelCreate := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelCreate()
+
+	created, err := c.client.api.ContainerCreate(ctxCreate,
+		containerConfig,
+		hostConfig,
+		&network.NetworkingConfig{},
+		name)
+
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			if err := c.pullImage(); err != nil {
+				return "", err
+			}
+
+			created, err = c.client.api.ContainerCreate(ctxCreate,
+				containerConfig,
+				hostConfig,
+				&network.NetworkingConfig{},
+				name)
+
+			if err != nil {
+				return "", err
+			} else {
+				return created.ID, nil
+			}
+		} else {
+			return "", err
+		}
+	} else {
+		for _, warning := range created.Warnings {
+			fmt.Sprintf("[%s] Warning: %s\n", c.Name, warning)
+		}
+
+		return created.ID, nil
+	}
+}
+
+func (c *Component) newContainerConfig() (*container.Config, error) {
+	entrypoint, err := asStrSlice(c.Entrypoint)
+	if err != nil {
+		return nil, err
+	}
+
+	command, err := asStrSlice(c.Command)
+	if err != nil {
+		return nil, err
+	}
 
 	containerConfig := container.Config{
 		Image:      c.Image,
@@ -59,7 +109,7 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 	if c.Healthcheck != nil {
 		testSlice, err := parseHealthcheckTest(c.Healthcheck.Test)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		containerConfig.Healthcheck = &container.HealthConfig{
@@ -71,66 +121,7 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 		}
 	}
 
-	hostConfig := container.HostConfig{
-		AutoRemove: true,
-
-		Resources: container.Resources{
-			CgroupParent: c.client.cgroup,
-
-			OomKillDisable: c.OomKillDisable,
-		},
-
-		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
-		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
-		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
-
-		OomScoreAdj: c.getOomScoreAdjust(),
-	}
-
-	if configuration.SharePids {
-		hostConfig.PidMode = container.PidMode("container:" + c.client.container.ID)
-	}
-
-	if configuration.ShareVolumes {
-		hostConfig.VolumesFrom = []string{c.client.container.ID}
-	}
-
-	ctxCreate, cancelCreate := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancelCreate()
-
-	created, err := c.client.api.ContainerCreate(ctxCreate,
-		&containerConfig,
-		&hostConfig,
-		&network.NetworkingConfig{},
-		name)
-
-	if err != nil {
-		if client.IsErrNotFound(err) {
-			if err := c.pullImage(); err != nil {
-				return "", err
-			}
-
-			created, err = c.client.api.ContainerCreate(ctxCreate,
-				&containerConfig,
-				&hostConfig,
-				&network.NetworkingConfig{},
-				name)
-
-			if err != nil {
-				return "", err
-			} else {
-				return created.ID, nil
-			}
-		} else {
-			return "", err
-		}
-	} else {
-		for _, warning := range created.Warnings {
-			fmt.Sprintf("[%s] Warning: %s\n", c.Name, warning)
-		}
-
-		return created.ID, nil
-	}
+	return &containerConfig, nil
 }
 
 func asStrSlice(value interface{}) (strslice.StrSlice, error) {
@@ -162,6 +153,63 @@ func asStrSlice(value interface{}) (strslice.StrSlice, error) {
 	}
 }
 
+func (c *Component) newHostConfig(configuration *config.Configuration) (*container.HostConfig, error) {
+	memLimit, err := c.getMemoryLimit()
+	if err != nil {
+		return nil, err
+	}
+
+	memSwapLimit, err := c.getMemorySwapLimit()
+	if err != nil {
+		return nil, err
+	}
+
+	resources := container.Resources{
+		CgroupParent: c.client.cgroup,
+
+		OomKillDisable: c.OomKillDisable,
+
+		Memory:           memLimit,
+		MemorySwap:       memSwapLimit,
+		MemorySwappiness: c.MemorySwappiness,
+	}
+
+	if c.MemoryReservation != nil {
+		resources.MemoryReservation = *c.MemoryReservation
+	}
+
+	hostConfig := container.HostConfig{
+		AutoRemove: true,
+
+		Resources: resources,
+
+		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
+		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
+		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
+
+		OomScoreAdj: c.getOomScoreAdjust(),
+	}
+
+	if c.ShmSize != nil {
+		size, err := units.RAMInBytes(*c.ShmSize)
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.ShmSize = size
+	}
+
+	if configuration.SharePids {
+		hostConfig.PidMode = container.PidMode("container:" + c.client.container.ID)
+	}
+
+	if configuration.ShareVolumes {
+		hostConfig.VolumesFrom = []string{c.client.container.ID}
+	}
+
+	return &hostConfig, nil
+}
+
 func (c *Component) getOomScoreAdjust() int {
 	if c.OomScoreAdj != nil {
 		return *c.OomScoreAdj
@@ -175,6 +223,56 @@ func (c *Component) getOomScoreAdjust() int {
 	} else {
 		return 1000
 	}
+}
+
+func (c *Component) getMemoryLimit() (int64, error) {
+	var (
+		limit int64
+		err   error
+	)
+
+	if c.MemoryLimit != "" {
+		limit, err = units.RAMInBytes(c.MemoryLimit)
+
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		limit = 0
+	}
+
+	if c.client.container.HostConfig.Memory > 0 {
+		if limit <= 0 || limit > c.client.container.HostConfig.Memory {
+			return c.client.container.HostConfig.Memory, nil
+		}
+	}
+
+	return limit, nil
+}
+
+func (c *Component) getMemorySwapLimit() (int64, error) {
+	var (
+		limit int64
+		err   error
+	)
+
+	if c.MemorySwapLimit != "" {
+		limit, err = units.RAMInBytes(c.MemorySwapLimit)
+
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		limit = 0
+	}
+
+	if c.client.container.HostConfig.MemorySwap > 0 {
+		if limit <= 0 || limit > c.client.container.HostConfig.MemorySwap {
+			return c.client.container.HostConfig.MemorySwap, nil
+		}
+	}
+
+	return limit, nil
 }
 
 func (c *Component) pullImage() error {

@@ -105,24 +105,28 @@ See the [examples folder](https://github.com/rycus86/podlike/tree/master/example
 
 This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
 
-I'm not yet sure how the components' containers will interfere with Swarm scheduling, resource allocation, etc. The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well (unless volume sharing is disabled with `-volumes=false`.
+I'm not yet sure how the components' containers will interfere with Swarm scheduling, resource allocation, etc. Memory limits are honored, but the components are limited to the controller's limits at most. Memory reservation is allowed on the components if you really want to, but comes with a warning. If you set the reservation on the controller, the cgroup should take note of this for you for all the containers.
+
+The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well (unless volume sharing is disabled with `-volumes=false`.
 
 Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
 
-Component reaping is done on a best-effort basis, killing the controller could leave you with zombie containers. With PID sharing enabled, it's somewhat mitigated, but you still end up having containers using memory and CPU after the controller dies. The components are also started with auto-remove, so getting information about them post-mortem might prove difficult.
+Component reaping is done on a best-effort basis, killing the controller could leave you with zombie containers. With the components placed within the controller's cgroup, plus with PID sharing enabled, this is probably somewhat mitigated, but you could still potentialy end up having containers using memory and CPU after the controller dies. The components are also started with auto-remove, so getting information about them post-mortem might prove difficult.
 
 ## Work in progress
 
 Some of the open tasks are:
 
-- [ ] Support for many-many more settings you can configure for the components' containers
-- [ ] CPU and Memory limit and reservation distribution within the pod
-- [ ] How does memory limit and reservation on the components affect Swarm scheduling
+- [ ] Support for most settings for the components *based on Composefile keys*
+- [ ] CPU limits and reservation
 - [ ] The stop grace period of the components should be smaller than the controller's
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
-- [x] Healthchecks
+- [ ] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
+- [x] Support for memory limits
+- [x] Note on how memory reservation *may* affect Swarm scheduling
+- [x] Support for healthchecks
 - [x] Small usage examples
 - [x] Sharing Swarm secrets and configs with the components - copy on start
 - [x] Do we want logs collected from the components - now optional

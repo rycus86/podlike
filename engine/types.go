@@ -39,6 +39,12 @@ type Component struct {
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`
 	OomKillDisable *bool `yaml:"oom_kill_disable"`
 
+	MemoryLimit       string  `yaml:"mem_limit"`
+	MemoryReservation *int64  `yaml:"mem_reservation"`
+	MemorySwapLimit   string  `yaml:"memswap_limit"`
+	MemorySwappiness  *int64  `yaml:"mem_swappiness"`
+	ShmSize           *string `yaml:"shm_size"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
