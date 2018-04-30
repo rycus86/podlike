@@ -23,6 +23,10 @@ func (c *Component) Start(configuration *config.Configuration) error {
 		return err
 	}
 
+	if err := c.initHealthCheckingIfNecessary(); err != nil {
+		return err
+	}
+
 	if err := c.startContainer(); err != nil {
 		return err
 	}

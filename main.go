@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rycus86/podlike/config"
 	"github.com/rycus86/podlike/engine"
+	"github.com/rycus86/podlike/healthcheck"
 	"os"
 	"os/signal"
 	"sync"
@@ -75,12 +76,34 @@ func done(components []*engine.Component) {
 	wg.Wait()
 }
 
+func checkAndExecuteHealthcheckIfNecessary() {
+	configuration := config.Parse()
+
+	if configuration.IsHealthcheck {
+		if healthcheck.Check() {
+			os.Exit(0)
+		} else {
+			os.Exit(1)
+		}
+	}
+}
+
 func main() {
+	checkAndExecuteHealthcheckIfNecessary()
+
+	hcServer, err := healthcheck.Serve()
+	if err != nil {
+		panic(err)
+	}
+	defer hcServer.Close()
+
 	client, err := engine.NewClient()
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
+
+	go client.WatchHealthcheckEvents()
 
 	components, err := client.GetComponents()
 	if err != nil {

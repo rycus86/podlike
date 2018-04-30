@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"time"
@@ -10,6 +11,10 @@ type Client struct {
 	api       *client.Client
 	cgroup    string
 	container *types.ContainerJSON
+
+	cancelEvents context.CancelFunc
+
+	closed bool
 }
 
 type Component struct {
@@ -23,7 +28,7 @@ type Component struct {
 	Tty             bool
 	StopSignal      string        `yaml:"stop_signal"`
 	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
-	HealthCheck     *struct {
+	Healthcheck     *struct {
 		Test        interface{}
 		Interval    time.Duration
 		Timeout     time.Duration

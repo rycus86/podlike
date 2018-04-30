@@ -56,6 +56,21 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 		containerConfig.StopTimeout = &stopTimeoutSeconds
 	}
 
+	if c.Healthcheck != nil {
+		testSlice, err := parseHealthcheckTest(c.Healthcheck.Test)
+		if err != nil {
+			return "", err
+		}
+
+		containerConfig.Healthcheck = &container.HealthConfig{
+			Test:        testSlice,
+			Interval:    c.Healthcheck.Interval,
+			Timeout:     c.Healthcheck.Timeout,
+			StartPeriod: c.Healthcheck.StartPeriod,
+			Retries:     c.Healthcheck.Retries,
+		}
+	}
+
 	hostConfig := container.HostConfig{
 		AutoRemove: true,
 
@@ -127,6 +142,17 @@ func asStrSlice(value interface{}) (strslice.StrSlice, error) {
 	sliceValue, ok := value.([]string)
 	if ok {
 		return sliceValue, nil
+	}
+
+	slice, ok := value.([]interface{})
+	if ok {
+		values := make([]string, len(slice), len(slice))
+
+		for idx, item := range slice {
+			values[idx] = fmt.Sprintf("%s", item)
+		}
+
+		return values, nil
 	} else {
 		return nil, errors.New(fmt.Sprintf("invalid string or slice: %T %+v", value, value))
 	}

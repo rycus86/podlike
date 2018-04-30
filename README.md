@@ -122,6 +122,7 @@ Some of the open tasks are:
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
+- [x] Healthchecks
 - [x] Small usage examples
 - [x] Sharing Swarm secrets and configs with the components - copy on start
 - [x] Do we want logs collected from the components - now optional

@@ -106,28 +106,28 @@ healthcheck:
 		t.Fatal("Failed to deserialize config:", err)
 	}
 
-	if item.HealthCheck == nil {
+	if item.Healthcheck == nil {
 		t.Fatal("Failed to deserialize healthcheck:")
 	}
 
-	if item.HealthCheck.Test != "curl -fs localhost:8000/" {
-		t.Error("Wrong test:", item.HealthCheck.Test)
+	if item.Healthcheck.Test != "curl -fs localhost:8000/" {
+		t.Error("Wrong test:", item.Healthcheck.Test)
 	}
 
-	if item.HealthCheck.Interval.Seconds() != 90 {
-		t.Error("Wrong interval:", item.HealthCheck.Interval)
+	if item.Healthcheck.Interval.Seconds() != 90 {
+		t.Error("Wrong interval:", item.Healthcheck.Interval)
 	}
 
-	if item.HealthCheck.Timeout.Seconds() != 10 {
-		t.Error("Wrong timeout:", item.HealthCheck.Timeout)
+	if item.Healthcheck.Timeout.Seconds() != 10 {
+		t.Error("Wrong timeout:", item.Healthcheck.Timeout)
 	}
 
-	if item.HealthCheck.Retries != 3 {
-		t.Error("Wrong retries:", item.HealthCheck.Retries)
+	if item.Healthcheck.Retries != 3 {
+		t.Error("Wrong retries:", item.Healthcheck.Retries)
 	}
 
-	if item.HealthCheck.StartPeriod.Seconds() != 40 {
-		t.Error("Wrong start period:", item.HealthCheck.StartPeriod)
+	if item.Healthcheck.StartPeriod.Seconds() != 40 {
+		t.Error("Wrong start period:", item.Healthcheck.StartPeriod)
 	}
 }
 
@@ -173,8 +173,8 @@ func TestDefaults(t *testing.T) {
 		t.Error("Wrong stop grace period:", item.StopGracePeriod)
 	}
 
-	if item.HealthCheck != nil {
-		t.Error("Wrong healthcheck:", item.HealthCheck)
+	if item.Healthcheck != nil {
+		t.Error("Wrong healthcheck:", item.Healthcheck)
 	}
 }
 

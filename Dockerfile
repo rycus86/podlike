@@ -22,4 +22,7 @@ LABEL maintainer "Viktor Adam <rycus86@gmail.com>"
 
 COPY --from=builder /var/tmp/app /podlike
 
+HEALTHCHECK --interval=1s --timeout=3s \
+    CMD [ "/podlike", "healthcheck" ]
+
 ENTRYPOINT [ "/podlike" ]
