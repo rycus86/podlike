@@ -12,7 +12,7 @@ import (
 func (c *Component) Stop() error {
 	fmt.Println("Stopping container:", c.Name)
 
-	if c.containerID == "" {
+	if c.container == nil {
 		return errors.New("Container is not running for component: " + c.Name)
 	}
 
@@ -41,7 +41,7 @@ func (c *Component) stopContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 
-	err := c.client.api.ContainerStop(ctx, c.containerID, stopTimeout)
+	err := c.client.api.ContainerStop(ctx, c.container.ID, stopTimeout)
 	if err != nil {
 		fmt.Println("Failed to stop the container:", err)
 	}
@@ -50,7 +50,7 @@ func (c *Component) stopContainer() error {
 }
 
 func (c *Component) removeContainer() error {
-	err := c.client.api.ContainerRemove(context.Background(), c.containerID, types.ContainerRemoveOptions{
+	err := c.client.api.ContainerRemove(context.Background(), c.container.ID, types.ContainerRemoveOptions{
 		Force: true,
 	})
 
@@ -67,6 +67,6 @@ func (c *Component) isRemovalInProgressError(err error) bool {
 	// TODO this feels a bit hacky
 	return strings.Contains(
 		err.Error(),
-		fmt.Sprintf("removal of container %s is already in progress", c.containerID),
+		fmt.Sprintf("removal of container %s is already in progress", c.container.ID),
 	)
 }

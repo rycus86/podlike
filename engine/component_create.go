@@ -197,7 +197,7 @@ func (c *Component) copyFilesIfNecessary() error {
 			fmt.Println("Copying", source, "to", c.Name, "@", target, "...")
 
 			return c.client.api.CopyToContainer(
-				context.TODO(), c.containerID, targetDir, reader, types.CopyToContainerOptions{})
+				context.TODO(), c.container.ID, targetDir, reader, types.CopyToContainerOptions{})
 		}
 	}
 

@@ -1,11 +1,9 @@
 package engine
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/rycus86/podlike/healthcheck"
-	"time"
 )
 
 func parseHealthcheckTest(value interface{}) ([]string, error) {
@@ -44,21 +42,12 @@ func (c *Component) initHealthCheckingIfNecessary() error {
 	}
 
 	if hasHealthcheck {
-		healthcheck.Initialize(c.containerID, healthcheck.StateStarting)
+		healthcheck.Initialize(c.container.ID, healthcheck.StateStarting)
 	}
 
 	return nil
 }
 
 func (c *Component) hasHealthcheck() (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	ctr, err := c.client.api.ContainerInspect(ctx, c.containerID)
-	if err != nil {
-		fmt.Println("Could not determine whether", c.Name, "has healthchecks")
-		return false, err
-	}
-
-	return ctr.Config.Healthcheck != nil && ctr.Config.Healthcheck.Test != nil, nil
+	return c.container.Config.Healthcheck != nil && c.container.Config.Healthcheck.Test != nil, nil
 }

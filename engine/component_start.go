@@ -16,8 +16,9 @@ func (c *Component) Start(configuration *config.Configuration) error {
 		return err
 	}
 
-	// save the container ID for later
-	c.containerID = containerID
+	if err := c.readContainerJSON(containerID); err != nil {
+		return err
+	}
 
 	if err := c.copyFilesIfNecessary(); err != nil {
 		return err
@@ -44,5 +45,5 @@ func (c *Component) startContainer() error {
 	ctxStart, cancelStart := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancelStart()
 
-	return c.client.api.ContainerStart(ctxStart, c.containerID, types.ContainerStartOptions{})
+	return c.client.api.ContainerStart(ctxStart, c.container.ID, types.ContainerStartOptions{})
 }

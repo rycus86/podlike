@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Component) streamLogs() {
-	if reader, err := c.client.api.ContainerLogs(context.Background(), c.containerID, types.ContainerLogsOptions{
+	if reader, err := c.client.api.ContainerLogs(context.Background(), c.container.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,

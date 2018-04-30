@@ -40,8 +40,8 @@ type Component struct {
 	client *Client `yaml:"-"`
 
 	// the name and container ID set in runtime
-	Name        string `yaml:"-"`
-	containerID string `yaml:"-"`
+	Name      string               `yaml:"-"`
+	container *types.ContainerJSON `yaml:"-"`
 }
 
 type ComponentExited struct {

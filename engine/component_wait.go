@@ -7,7 +7,7 @@ import (
 )
 
 func (c *Component) WaitFor(exitChan chan<- ComponentExited) {
-	if c.containerID == "" {
+	if c.container == nil {
 		exitChan <- ComponentExited{
 			Component: c,
 			Error:     errors.New("component not started"),
@@ -15,7 +15,7 @@ func (c *Component) WaitFor(exitChan chan<- ComponentExited) {
 		return
 	}
 
-	waitChan, errChan := c.client.api.ContainerWait(context.Background(), c.containerID, container.WaitConditionNotRunning)
+	waitChan, errChan := c.client.api.ContainerWait(context.Background(), c.container.ID, container.WaitConditionNotRunning)
 
 	for {
 		select {

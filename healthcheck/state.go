@@ -19,10 +19,6 @@ var (
 )
 
 func getCurrentState() int {
-	if len(currentStates) == 0 {
-		return StateUnknown
-	}
-
 	state := StateHealthy
 
 	for _, s := range currentStates {
