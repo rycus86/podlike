@@ -36,6 +36,9 @@ type Component struct {
 		Retries     int
 	} `yaml:"healthcheck"`
 
+	OomScoreAdj    *int  `yaml:"oom_score_adj"`
+	OomKillDisable *bool `yaml:"oom_kill_disable"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 

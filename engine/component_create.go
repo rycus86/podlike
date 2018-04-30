@@ -76,11 +76,15 @@ func (c *Component) createContainer(configuration *config.Configuration) (string
 
 		Resources: container.Resources{
 			CgroupParent: c.client.cgroup,
+
+			OomKillDisable: c.OomKillDisable,
 		},
 
 		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
 		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
 		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
+
+		OomScoreAdj: c.getOomScoreAdjust(),
 	}
 
 	if configuration.SharePids {
@@ -155,6 +159,21 @@ func asStrSlice(value interface{}) (strslice.StrSlice, error) {
 		return values, nil
 	} else {
 		return nil, errors.New(fmt.Sprintf("invalid string or slice: %T %+v", value, value))
+	}
+}
+
+func (c *Component) getOomScoreAdjust() int {
+	if c.OomScoreAdj != nil {
+		return *c.OomScoreAdj
+	}
+
+	score := c.client.container.HostConfig.OomScoreAdj
+
+	if score < 1000 {
+		// make it a little more likely to be killed than the controller
+		return score + 1
+	} else {
+		return 1000
 	}
 }
 

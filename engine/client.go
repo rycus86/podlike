@@ -78,7 +78,10 @@ func (c *Client) WatchHealthcheckEvents() {
 func (c *Client) Close() error {
 	c.closed = true
 
-	c.cancelEvents()
+	if c.cancelEvents != nil {
+		c.cancelEvents()
+	}
+
 	return c.api.Close()
 }
 
