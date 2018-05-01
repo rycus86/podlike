@@ -23,11 +23,16 @@ type Component struct {
 	Entrypoint      interface{}
 	Command         interface{}
 	WorkingDir      string `yaml:"working_dir"`
-	Environment     []string
-	Labels          map[string]string
+	Environment     []string  // TODO this can be a map too, plus `env_file` support
+	Labels          map[string]string  // TODO this can be a list of KEY=VALUE too
+	Privileged      bool
+	ReadOnly	bool          `yaml:"read_only"`
+	StdinOpen	bool          `yaml:"stdin_open"`
 	Tty             bool
 	StopSignal      string        `yaml:"stop_signal"`
 	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
+	User            string
+
 	Healthcheck     *struct {
 		Test        interface{}
 		Interval    time.Duration

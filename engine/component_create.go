@@ -97,8 +97,10 @@ func (c *Component) newContainerConfig() (*container.Config, error) {
 		WorkingDir: c.WorkingDir,
 		Env:        c.Environment,
 		Labels:     c.Labels,
+		OpenStdin:  c.StdinOpen,
 		Tty:        c.Tty,
 		StopSignal: c.StopSignal,
+		User:       c.User,
 	}
 
 	if c.StopGracePeriod.Seconds() > 0 {
@@ -192,6 +194,9 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		Cgroup:      container.CgroupSpec("container:" + c.client.container.ID),
 		IpcMode:     container.IpcMode("container:" + c.client.container.ID),
 		NetworkMode: container.NetworkMode("container:" + c.client.container.ID),
+
+		Privileged:     c.Privileged,
+		ReadonlyRootfs: c.ReadOnly,
 
 		OomScoreAdj: c.getOomScoreAdjust(),
 	}
