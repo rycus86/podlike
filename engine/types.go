@@ -18,29 +18,21 @@ type Client struct {
 }
 
 type Component struct {
-	// supported options
 	Image           string
 	Entrypoint      interface{}
 	Command         interface{}
-	WorkingDir      string `yaml:"working_dir"`
-	Environment     []string  // TODO this can be a map too, plus `env_file` support
-	Labels          map[string]string  // TODO this can be a list of KEY=VALUE too
+	WorkingDir      string            `yaml:"working_dir"`
+	Environment     []string          // TODO this can be a map too, plus `env_file` support
+	Labels          map[string]string // TODO this can be a list of KEY=VALUE too
 	Privileged      bool
-	ReadOnly	bool          `yaml:"read_only"`
-	StdinOpen	bool          `yaml:"stdin_open"`
+	ReadOnly        bool `yaml:"read_only"`
+	StdinOpen       bool `yaml:"stdin_open"`
 	Tty             bool
 	StopSignal      string        `yaml:"stop_signal"`
 	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
 	User            string
 
-	Healthcheck     *struct {
-		Test        interface{}
-		Interval    time.Duration
-		Timeout     time.Duration
-		StartPeriod time.Duration `yaml:"start_period"`
-		Retries     int
-		Disable	    bool
-	} `yaml:"healthcheck"`
+	Healthcheck *Healthcheck
 
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`
 	OomKillDisable *bool `yaml:"oom_kill_disable"`
@@ -57,6 +49,15 @@ type Component struct {
 	// the name and container ID set in runtime
 	Name      string               `yaml:"-"`
 	container *types.ContainerJSON `yaml:"-"`
+}
+
+type Healthcheck struct {
+	Test        interface{}
+	Interval    time.Duration
+	Timeout     time.Duration
+	StartPeriod time.Duration `yaml:"start_period"`
+	Retries     int
+	Disable     bool
 }
 
 type ComponentExited struct {

@@ -130,7 +130,7 @@ func newTestClient(
 				ID:   "01234",
 				Name: "mock-container",
 
-			        HostConfig: &container.HostConfig{},
+				HostConfig: &container.HostConfig{},
 			},
 			Config: &container.Config{
 				Labels: labels,

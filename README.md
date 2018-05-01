@@ -118,14 +118,15 @@ Component reaping is done on a best-effort basis, killing the controller could l
 Some of the open tasks are:
 
 - [ ] Support for most settings for the components *based on Composefile keys*
-- [ ] List the supported keys, and gate on having this list up to date in the README
 - [ ] CPU limits and reservation
 - [ ] The stop grace period of the components should be smaller than the controller's
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
+- [ ] Extra labels on the components
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
 - [ ] Consider adding a `pause` container
 - [ ] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
+- [x] List the unsupported keys, and gate on having this list up to date in the README
 - [x] Support for memory limits
 - [x] Note on how memory reservation *may* affect Swarm scheduling
 - [x] Support for healthchecks
@@ -136,11 +137,11 @@ Some of the open tasks are:
 ## Unsupported properties
 
 - `blkio_config`
-- `build`
+- `build`: Only pre-built images are supported
 - `cap_add`
 - `cap_drop`
-- `cgroup_parent`
-- `container_name`
+- `cgroup_parent`: This is set by the controller
+- `container_name`: This is set by the controller
 - `cpu_count`
 - `cpu_percent`
 - `cpu_period`
@@ -150,46 +151,48 @@ Some of the open tasks are:
 - `cpu_shares`
 - `cpus`
 - `cpuset`
-- `depends_on`
+- `depends_on`: Compose-style dependency is not supported
 - `device_cgroup_rules`
 - `devices`
-- `dns`
-- `dns_opt`
-- `dns_search`
-- `domainname`
+- `dns`: DNS management is handled by the controller
+- `dns_opt`: DNS management is handled by the controller
+- `dns_search`: DNS management is handled by the controller
+- `domainname`: Networking is handled by the controller
 - `env_file`
-- `expose`
-- `extends`
-- `external_links`
-- `extra_hosts`
+- `expose`: Expose ports by publishing them on the Swarm service
+- `extends`: Compose-style extends are not supported
+- `external_links`: Container links are not supported
+- `extra_hosts`: Networking is handled by the controller
 - `group_add`
-- `hostname`
-- `init`
-- `ipc`
+- `hostname`: Networking is handled by the controller
+- `init`: Not supported, the controller *attempts* to take care of it
+- `ipc`: IPC is set by the controller
 - `isolation`
-- `links`
+- `links`: Container links are not supported
 - `logging`
-- `mac_address`
-- `network_mode`
-- `networks`
-- `pid`
+- `mac_address`: Networking is handled by the controller
+- `network_mode`: Network mode is set by the controller
+- `networks`: Assign networks through the Swarm service
+- `pid`: PID mode is set by the controller
 - `pids_limit`
-- `platform`
-- `ports`
-- `restart`
+- `platform`: Use a Swarm service constraint instead
+- `ports`: Expose ports by publishing them on the Swarm service
+- `restart`: Restart modes are not supported
 - `runtime`
-- `scale`
+- `scale`: Scale by increasing the number of Swarm service replicas
 - `security_opt`
 - `storage_opt`
 - `sysctls`
 - `tmpfs`
 - `ulimits`
 - `userns_mode`
-- `volume_driver`
-- `volumes`
-- `volumes_from`
+- `volume_driver`: *Currently* managed by the controller, using `volumes_from`
+- `volumes`: *Currently* set by the controller, using `volumes_from`
+- `volumes_from`: *Currently* set by the controller
 
 > The list above is work in progress, there will be more supported properties.
+
+Any other properties from the [v2 Compose file](https://docs.docker.com/compose/compose-file/compose-file-v2/) should be supported, and working as expected.
 
 ## License
 
