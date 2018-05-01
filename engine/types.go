@@ -34,6 +34,7 @@ type Component struct {
 		Timeout     time.Duration
 		StartPeriod time.Duration `yaml:"start_period"`
 		Retries     int
+		Disable	    bool
 	} `yaml:"healthcheck"`
 
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`

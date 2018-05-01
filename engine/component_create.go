@@ -107,17 +107,23 @@ func (c *Component) newContainerConfig() (*container.Config, error) {
 	}
 
 	if c.Healthcheck != nil {
-		testSlice, err := parseHealthcheckTest(c.Healthcheck.Test)
-		if err != nil {
-			return nil, err
-		}
+		if c.Healthcheck.Disable {
+			containerConfig.Healthcheck = &container.HealthConfig{
+				Test: []string{"NONE"},
+			}
+		} else {
+			testSlice, err := parseHealthcheckTest(c.Healthcheck.Test)
+			if err != nil {
+				return nil, err
+			}
 
-		containerConfig.Healthcheck = &container.HealthConfig{
-			Test:        testSlice,
-			Interval:    c.Healthcheck.Interval,
-			Timeout:     c.Healthcheck.Timeout,
-			StartPeriod: c.Healthcheck.StartPeriod,
-			Retries:     c.Healthcheck.Retries,
+			containerConfig.Healthcheck = &container.HealthConfig{
+				Test:        testSlice,
+				Interval:    c.Healthcheck.Interval,
+				Timeout:     c.Healthcheck.Timeout,
+				StartPeriod: c.Healthcheck.StartPeriod,
+				Retries:     c.Healthcheck.Retries,
+			}
 		}
 	}
 

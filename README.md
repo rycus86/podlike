@@ -118,11 +118,13 @@ Component reaping is done on a best-effort basis, killing the controller could l
 Some of the open tasks are:
 
 - [ ] Support for most settings for the components *based on Composefile keys*
+- [ ] List the supported keys, and gate on having this list up to date in the README
 - [ ] CPU limits and reservation
 - [ ] The stop grace period of the components should be smaller than the controller's
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
+- [ ] Consider adding a `pause` container
 - [ ] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
 - [x] Support for memory limits
 - [x] Note on how memory reservation *may* affect Swarm scheduling
