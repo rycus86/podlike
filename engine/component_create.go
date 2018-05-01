@@ -9,10 +9,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-units"
-	"github.com/mattn/go-shellwords"
 	"github.com/rycus86/podlike/config"
 	"io"
 	"io/ioutil"
@@ -90,13 +88,28 @@ func (c *Component) newContainerConfig() (*container.Config, error) {
 		return nil, err
 	}
 
+	envFromFiles, err := variablesFromEnvFiles(c.EnvFile)
+	if err != nil {
+		return nil, err
+	}
+
+	envFromVariables, err := asStringToStringMap(c.Environment)
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := asStringToStringMap(c.Labels)
+	if err != nil {
+		return nil, err
+	}
+
 	containerConfig := container.Config{
 		Image:      c.Image,
 		Entrypoint: entrypoint,
 		Cmd:        command,
 		WorkingDir: c.WorkingDir,
-		Env:        c.Environment,
-		Labels:     c.Labels,
+		Env:        mergeEnvVariables(envFromFiles, envFromVariables),
+		Labels:     labels,
 		OpenStdin:  c.StdinOpen,
 		Tty:        c.Tty,
 		StopSignal: c.StopSignal,
@@ -130,35 +143,6 @@ func (c *Component) newContainerConfig() (*container.Config, error) {
 	}
 
 	return &containerConfig, nil
-}
-
-func asStrSlice(value interface{}) (strslice.StrSlice, error) {
-	if value == nil {
-		return nil, nil
-	}
-
-	stringValue, ok := value.(string)
-	if ok {
-		return shellwords.Parse(stringValue)
-	}
-
-	sliceValue, ok := value.([]string)
-	if ok {
-		return sliceValue, nil
-	}
-
-	slice, ok := value.([]interface{})
-	if ok {
-		values := make([]string, len(slice), len(slice))
-
-		for idx, item := range slice {
-			values[idx] = fmt.Sprintf("%s", item)
-		}
-
-		return values, nil
-	} else {
-		return nil, errors.New(fmt.Sprintf("invalid string or slice: %T %+v", value, value))
-	}
 }
 
 func (c *Component) newHostConfig(configuration *config.Configuration) (*container.HostConfig, error) {

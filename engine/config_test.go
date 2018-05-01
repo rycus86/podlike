@@ -1,8 +1,13 @@
 package engine
 
 import (
+	"bytes"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
+	"text/template"
 )
 
 func TestDeserialization(t *testing.T) {
@@ -36,19 +41,29 @@ stop_grace_period: 1m30s
 		t.Error("Wrong working directory:", item.WorkingDir)
 	}
 
-	if len(item.Environment) != 1 || item.Environment[0] != "ENV=environment" {
+	environment, err := asStringSlice(item.Environment)
+	if err != nil {
+		t.Error("Wrong environemnt variables:", err)
+	}
+
+	if len(environment) != 1 || environment[0] != "ENV=environment" {
 		t.Error("Wrong environment variables:", item.Environment)
 	}
 
-	if len(item.Labels) != 2 {
+	labels, err := asStringToStringMap(item.Labels)
+	if err != nil {
+		t.Error("Wrong labels:", err)
+	}
+
+	if len(labels) != 2 {
 		t.Error("Wrong number of labels:", item.Labels)
 	}
 
-	if value, ok := item.Labels["label.one"]; !ok || value != "first label" {
+	if value, ok := labels["label.one"]; !ok || value != "first label" {
 		t.Error("Wrong labels:", item.Labels)
 	}
 
-	if value, ok := item.Labels["label.two"]; !ok || value != "second label" {
+	if value, ok := labels["label.two"]; !ok || value != "second label" {
 		t.Error("Wrong labels:", item.Labels)
 	}
 
@@ -131,6 +146,178 @@ healthcheck:
 	}
 }
 
+func contains(item string, list []string) bool {
+	for _, test := range list {
+		if item == test {
+			return true
+		}
+	}
+
+	return false
+}
+
+func mapContains(item string, m map[string]string) bool {
+	parts := strings.SplitN(item, "=", 2)
+	value, ok := m[parts[0]]
+	return ok && value == parts[1]
+}
+
+func TestEnvAndLabelsAsSliceOrMap(t *testing.T) {
+	var (
+		item *Component
+		err  error
+
+		environment []string
+		labels      map[string]string
+	)
+
+	item, err = deserialize(`
+image: as_slice
+environment:
+  - ONE=1
+  - TWO=2
+labels:
+  - label.one=l-one
+  - label.two=l-two
+`)
+	if err != nil {
+		t.Error("Failed to deserialize:", err)
+	}
+
+	environment, err = asStringSlice(item.Environment)
+	if err != nil {
+		t.Error("Wrong environment variables:", err)
+	}
+
+	if len(environment) != 2 || !contains("ONE=1", environment) || !contains("TWO=2", environment) {
+		t.Error("Wrong environment variables:", item.Environment, environment)
+	}
+
+	labels, err = asStringToStringMap(item.Labels)
+	if err != nil {
+		t.Error("Wrong labels:", err)
+	}
+
+	if len(labels) != 2 || labels["label.one"] != "l-one" || labels["label.two"] != "l-two" {
+		t.Error("Wrong labels:", item.Labels, labels)
+	}
+
+	item, err = deserialize(`
+image: as_map
+environment:
+  ONE: '1'
+  TWO: '2'
+labels:
+  label.one: l-one
+  label.two: l-two
+`)
+	if err != nil {
+		t.Error("Failed to deserialize:", err)
+	}
+
+	environment, err = asStringSlice(item.Environment)
+	if err != nil {
+		t.Error("Wrong environment variables:", err)
+	}
+
+	if len(environment) != 2 || !contains("ONE=1", environment) || !contains("TWO=2", environment) {
+		t.Error("Wrong environment variables:", item.Environment, environment)
+	}
+
+	labels, err = asStringToStringMap(item.Labels)
+	if err != nil {
+		t.Error("Wrong labels:", err)
+	}
+
+	if len(labels) != 2 || labels["label.one"] != "l-one" || labels["label.two"] != "l-two" {
+		t.Error("Wrong labels:", item.Labels, labels)
+	}
+}
+
+func TestWithEnvFiles(t *testing.T) {
+	f1, err := ioutil.TempFile("/tmp", "first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f1.Name())
+	defer f1.Close()
+
+	f2, err := ioutil.TempFile("/tmp", "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f2.Name())
+	defer f2.Close()
+
+	f1.WriteString("ONE=1\n")
+	f1.WriteString("TWO=2\n")
+	f1.WriteString("OVERRIDE=12\n")
+	f1.WriteString("ENV_OVERRIDE=file")
+	f1.Sync()
+
+	f2.WriteString("THREE=3\n")
+	f2.WriteString("EMPTY=\n")
+	f2.WriteString("# comment\n")
+	f2.WriteString("OVERRIDE=42\n")
+	f2.Sync()
+
+	type EnvFiles struct {
+		File1 string
+		File2 string
+	}
+
+	tmpl, err := template.New("test").Parse(`
+image: testing
+environment:
+  - STATIC=x
+  - ENV_OVERRIDE=env
+env_file:
+  - {{.File1}}
+  - {{.File2}}
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	tmpl.Execute(&buf, EnvFiles{File1: f1.Name(), File2: f2.Name()})
+
+	item, err := deserialize(buf.String())
+
+	if err != nil {
+		t.Error("Failed to deserialize:", err)
+	}
+
+	fromVariables, err := asStringToStringMap(item.Environment)
+	if err != nil {
+		t.Error("Wrong environment variables:", err)
+	}
+
+	if len(fromVariables) != 2 ||
+		!mapContains("STATIC=x", fromVariables) ||
+		!mapContains("ENV_OVERRIDE=env", fromVariables) {
+		t.Error("Wrong environment variables:", item.Environment, fromVariables)
+	}
+
+	fromFiles, err := variablesFromEnvFiles(item.EnvFile)
+	if err != nil {
+		t.Error("Wrong env files:", item.EnvFile, err)
+	}
+
+	merged := mergeEnvVariables(fromFiles, fromVariables)
+
+	if len(merged) != 7 ||
+		!contains("STATIC=x", merged) ||
+		!contains("ONE=1", merged) ||
+		!contains("TWO=2", merged) ||
+		!contains("THREE=3", merged) ||
+		!contains("EMPTY=", merged) ||
+		!contains("OVERRIDE=42", merged) ||
+		!contains("ENV_OVERRIDE=env", merged) {
+		t.Fatal("Wrong environment variables:", merged)
+	}
+}
+
 func TestDefaults(t *testing.T) {
 	item, err := deserialize("image: defaults")
 	if err != nil {
@@ -153,11 +340,21 @@ func TestDefaults(t *testing.T) {
 		t.Error("Wrong working directory:", item.WorkingDir)
 	}
 
-	if len(item.Environment) != 0 {
+	environment, err := asStringSlice(item.Environment)
+	if err != nil {
+		t.Error("Wrong environemnt variables:", err)
+	}
+
+	if len(environment) != 0 {
 		t.Error("Wrong environment:", item.Environment)
 	}
 
-	if len(item.Labels) != 0 {
+	labels, err := asStringToStringMap(item.Labels)
+	if err != nil {
+		t.Error("Wrong labels:", err)
+	}
+
+	if len(labels) != 0 {
 		t.Error("Wrong labels:", item.Labels)
 	}
 

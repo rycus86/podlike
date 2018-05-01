@@ -21,9 +21,10 @@ type Component struct {
 	Image           string
 	Entrypoint      interface{}
 	Command         interface{}
-	WorkingDir      string            `yaml:"working_dir"`
-	Environment     []string          // TODO this can be a map too, plus `env_file` support
-	Labels          map[string]string // TODO this can be a list of KEY=VALUE too
+	WorkingDir      string      `yaml:"working_dir"`
+	EnvFile         interface{} `yaml:"env_file"`
+	Environment     interface{}
+	Labels          interface{}
 	Privileged      bool
 	ReadOnly        bool `yaml:"read_only"`
 	StdinOpen       bool `yaml:"stdin_open"`

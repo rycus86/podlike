@@ -158,7 +158,6 @@ Some of the open tasks are:
 - `dns_opt`: DNS management is handled by the controller
 - `dns_search`: DNS management is handled by the controller
 - `domainname`: Networking is handled by the controller
-- `env_file`
 - `expose`: Expose ports by publishing them on the Swarm service
 - `extends`: Compose-style extends are not supported
 - `external_links`: Container links are not supported
