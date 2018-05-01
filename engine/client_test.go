@@ -101,6 +101,16 @@ func newTestClient(
 
 			w.WriteHeader(200)
 			w.Write(response)
+
+			return
+		}
+
+		if strings.HasSuffix(r.RequestURI, "/json") {
+			w.WriteHeader(200)
+			w.Write([]byte("{\"ID\": \"c0001\", \"Config\": {}}"))
+			// TODO implement properly
+
+			return
 		}
 	}))
 
@@ -119,6 +129,8 @@ func newTestClient(
 			ContainerJSONBase: &types.ContainerJSONBase{
 				ID:   "01234",
 				Name: "mock-container",
+
+			        HostConfig: &container.HostConfig{},
 			},
 			Config: &container.Config{
 				Labels: labels,

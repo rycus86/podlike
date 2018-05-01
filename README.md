@@ -133,6 +133,64 @@ Some of the open tasks are:
 - [x] Sharing Swarm secrets and configs with the components - copy on start
 - [x] Do we want logs collected from the components - now optional
 
+## Unsupported properties
+
+- `blkio_config`
+- `build`
+- `cap_add`
+- `cap_drop`
+- `cgroup_parent`
+- `container_name`
+- `cpu_count`
+- `cpu_percent`
+- `cpu_period`
+- `cpu_quota`
+- `cpu_rt_period`
+- `cpu_rt_runtime`
+- `cpu_shares`
+- `cpus`
+- `cpuset`
+- `depends_on`
+- `device_cgroup_rules`
+- `devices`
+- `dns`
+- `dns_opt`
+- `dns_search`
+- `domainname`
+- `env_file`
+- `expose`
+- `extends`
+- `external_links`
+- `extra_hosts`
+- `group_add`
+- `hostname`
+- `init`
+- `ipc`
+- `isolation`
+- `links`
+- `logging`
+- `mac_address`
+- `network_mode`
+- `networks`
+- `pid`
+- `pids_limit`
+- `platform`
+- `ports`
+- `restart`
+- `runtime`
+- `scale`
+- `security_opt`
+- `storage_opt`
+- `sysctls`
+- `tmpfs`
+- `ulimits`
+- `userns_mode`
+- `volume_driver`
+- `volumes`
+- `volumes_from`
+
+> The list above is work in progress, there will be more supported properties.
+
 ## License
 
 MIT
