@@ -19,6 +19,10 @@ type Configuration struct {
 }
 
 func init() {
+	setupVariables()
+}
+
+func setupVariables() {
 	flag.BoolVar(&pids, "pids", true, "Enable (default) or disable PID sharing")
 	flag.BoolVar(&volumes, "volumes", true, "Enable (default) or disable volume sharing")
 	flag.BoolVar(&logs, "logs", false, "Stream logs from the components")

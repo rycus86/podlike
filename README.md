@@ -193,6 +193,20 @@ Some of the open tasks are:
 
 Any other properties from the [v2 Compose file](https://docs.docker.com/compose/compose-file/compose-file-v2/) should be supported, and working as expected.
 
+## Command line usage
+
+```
+Usage of /podlike:
+  -logs
+    	Stream logs from the components
+  -pids
+    	Enable (default) or disable PID sharing (default true)
+  -pull
+    	Always pull the images for the components when starting
+  -volumes
+    	Enable (default) or disable volume sharing (default true)
+```
+
 ## License
 
 MIT
