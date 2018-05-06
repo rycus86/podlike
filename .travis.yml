@@ -35,7 +35,7 @@ jobs:
             .
       after_success:
         - |
-          docker login -u="rycus86" -p="$DOCKER_PASSWORD"
+          echo ${DOCKER_PASSWORD} | docker login --username "rycus86" --password-stdin
           if [ "$TRAVIS_BRANCH" == "master" ]; then
               docker tag podlike:$DOCKER_TAG rycus86/podlike:$DOCKER_TAG
               docker push rycus86/podlike:$DOCKER_TAG
@@ -60,8 +60,7 @@ jobs:
     - stage: manifest
       sudo: required
       script:
-        - |
-        - docker login -u="rycus86" -p="${DOCKER_PASSWORD}"
+        - echo ${DOCKER_PASSWORD} | docker login --username "rycus86" --password-stdin
         - curl -fsSL https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64 > ./manifest-tool
         - chmod +x ./manifest-tool
         - ./manifest-tool push from-spec manifest.yml
