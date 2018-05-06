@@ -76,6 +76,8 @@ type Component struct {
 
 	Ulimits map[string]interface{}
 
+	Logging *LoggingConfig
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
@@ -100,6 +102,11 @@ type BlkioConfig struct {
 	DeviceWriteBps  []*blkiodev.ThrottleDevice `yaml:"device_read_iops"`
 	DeviceReadIOps  []*blkiodev.ThrottleDevice `yaml:"device_write_bps"`
 	DeviceWriteIOps []*blkiodev.ThrottleDevice `yaml:"device_write_iops"`
+}
+
+type LoggingConfig struct {
+	Driver  string
+	Options map[string]string
 }
 
 type ComponentExited struct {

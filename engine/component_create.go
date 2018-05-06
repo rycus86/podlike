@@ -278,6 +278,13 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		hostConfig.Ulimits = ulimits
 	}
 
+	if c.Logging != nil {
+		hostConfig.LogConfig = container.LogConfig{
+			Type:   c.Logging.Driver,
+			Config: c.Logging.Options,
+		}
+	}
+
 	if configuration.SharePids {
 		hostConfig.PidMode = container.PidMode("container:" + c.client.container.ID)
 	}

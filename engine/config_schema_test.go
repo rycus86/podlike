@@ -27,6 +27,7 @@ func TestSchema(t *testing.T) {
 		fieldRe       = regexp.MustCompile(".* field (.+) not found in type engine.Component")
 		healthcheckRe = regexp.MustCompile(".* field (.+) not found in type engine.Healthcheck")
 		blkioRe       = regexp.MustCompile(".* field (.+) not found in type engine.BlkioConfig")
+		loggingRe     = regexp.MustCompile(".* field (.+) not found in type engine.LoggingConfig")
 	)
 
 	allDefinitions := schema["definitions"].(map[string]interface{})
@@ -51,6 +52,8 @@ func TestSchema(t *testing.T) {
 				unsupported = append(unsupported, healthcheckRe.ReplaceAllString(e, "healthcheck.$1"))
 			} else if blkioRe.MatchString(e) {
 				unsupported = append(unsupported, blkioRe.ReplaceAllString(e, "blkio_config.$1"))
+			} else if loggingRe.MatchString(e) {
+				unsupported = append(unsupported, loggingRe.ReplaceAllString(e, "logging.$1"))
 			} else {
 				unsupported = append(unsupported, "? ("+e+")")
 			}
