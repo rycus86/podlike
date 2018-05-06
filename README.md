@@ -195,6 +195,8 @@ Any other properties from the [v2 Compose file](https://docs.docker.com/compose/
 
 ## Command line usage
 
+The application supports these command line flags, that you can pass to container or the service, using the `command` property if you're deploying from a stack YAML.
+
 ```
 Usage of /podlike:
   -logs
@@ -206,6 +208,8 @@ Usage of /podlike:
   -volumes
     	Enable (default) or disable volume sharing (default true)
 ```
+
+Alternatively, the `healthcheck` argument starts a one-off run that returns the current health status of the app running in the same container. Check the [Dockerfile](Dockerfile) and the [healthcheck/client.go](https://github.com/rycus86/podlike/blob/master/healthcheck/client.go) source code to see how this works.
 
 ## License
 
