@@ -38,6 +38,9 @@ type Component struct {
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`
 	OomKillDisable *bool `yaml:"oom_kill_disable"`
 
+	CapAdd  []string `yaml:"cap_add"`
+	CapDrop []string `yaml:"cap_drop"`
+
 	MemoryLimit       string  `yaml:"mem_limit"`
 	MemoryReservation *int64  `yaml:"mem_reservation"`
 	MemorySwapLimit   string  `yaml:"memswap_limit"`

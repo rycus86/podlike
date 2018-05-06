@@ -138,8 +138,6 @@ Some of the open tasks are:
 
 - `blkio_config`
 - `build`: Only pre-built images are supported
-- `cap_add`
-- `cap_drop`
 - `cgroup_parent`: This is set by the controller
 - `container_name`: This is set by the controller
 - `cpu_count`

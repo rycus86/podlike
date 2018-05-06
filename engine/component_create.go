@@ -194,6 +194,24 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		hostConfig.ShmSize = size
 	}
 
+	if c.CapAdd != nil {
+		capabilitiesToAdd, err := asStrSlice(c.CapAdd)
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.CapAdd = capabilitiesToAdd
+	}
+
+	if c.CapDrop != nil {
+		capabilitiesToDrop, err := asStrSlice(c.CapDrop)
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.CapDrop = capabilitiesToDrop
+	}
+
 	if configuration.SharePids {
 		hostConfig.PidMode = container.PidMode("container:" + c.client.container.ID)
 	}
