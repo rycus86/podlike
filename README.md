@@ -161,7 +161,6 @@ Some of the open tasks are:
 - `ports`: Expose ports by publishing them on the Swarm service
 - `restart`: Restart modes are not supported
 - `scale`: Scale by increasing the number of Swarm service replicas
-- `ulimits`
 - `volume_driver`: *Currently* managed by the controller, using `volumes_from`
 - `volumes`: *Currently* set by the controller, using `volumes_from`
 - `volumes_from`: *Currently* set by the controller

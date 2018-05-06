@@ -269,6 +269,15 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		hostConfig.Sysctls = sysctls
 	}
 
+	if c.Ulimits != nil {
+		ulimits, err := c.getUlimits()
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.Ulimits = ulimits
+	}
+
 	if configuration.SharePids {
 		hostConfig.PidMode = container.PidMode("container:" + c.client.container.ID)
 	}
@@ -343,6 +352,68 @@ func (c *Component) getMemorySwapLimit() (int64, error) {
 	}
 
 	return limit, nil
+}
+
+func (c *Component) getUlimits() ([]*units.Ulimit, error) {
+	if c.Ulimits == nil {
+		return nil, nil
+	}
+
+	res := make([]*units.Ulimit, len(c.Ulimits), len(c.Ulimits))
+	index := 0
+
+	for key, item := range c.Ulimits {
+		var hard, soft int64
+
+		if value, ok := item.(int64); ok {
+			hard = value
+			soft = value
+		} else if value, ok := item.(int); ok {
+			hard = int64(value)
+			soft = int64(value)
+		} else if mapped, ok := item.(map[interface{}]interface{}); ok {
+			// TODO this could do with a bit more validation and error handling
+			hardRaw, ok := mapped["hard"]
+			if !ok {
+				return nil, errors.New(fmt.Sprintf("'hard' not found in ulimit: %s = %+v %T", key, mapped, mapped))
+			}
+
+			softRaw, ok := mapped["soft"]
+			if !ok {
+				return nil, errors.New(fmt.Sprintf("'soft' not found in ulimit: %s = %+v %T", key, mapped, mapped))
+			}
+
+			if hard, ok = hardRaw.(int64); !ok {
+				if hardInt, ok := hardRaw.(int); ok {
+					hard = int64(hardInt)
+				} else {
+					return nil, errors.New(fmt.Sprintf("unexpected ulimit: %s.hard = %+v %T", key, hardRaw, hardRaw))
+				}
+			}
+
+			if soft, ok = softRaw.(int64); !ok {
+				if softInt, ok := softRaw.(int); ok {
+					soft = int64(softInt)
+				} else {
+					return nil, errors.New(fmt.Sprintf("unexpected ulimit: %s.soft = %+v %T", key, softRaw, softRaw))
+				}
+			}
+		} else {
+			return nil, errors.New(fmt.Sprintf("unexpected ulimit: %s = %+v %T", key, item, item))
+		}
+
+		ulimit := units.Ulimit{
+			Name: key,
+			Hard: hard,
+			Soft: soft,
+		}
+
+		res[index] = &ulimit
+
+		index++
+	}
+
+	return res, nil
 }
 
 func (c *Component) pullImage() error {

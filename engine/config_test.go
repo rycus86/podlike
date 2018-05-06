@@ -318,6 +318,30 @@ env_file:
 	}
 }
 
+func TestUlimits(t *testing.T) {
+	item, err := deserialize(`
+image: sample
+ulimits:
+  nproc: 65535
+  nofile:
+    soft: 20000
+    hard: 40000
+`)
+
+	if err != nil {
+		t.Fatal("Failed to deserialize config:", err)
+	}
+
+	ulimits, err := item.getUlimits()
+	if err != nil {
+		t.Fatal("Failed to parse ulimits:", err)
+	}
+
+	if len(ulimits) != 2 {
+		t.Error("Invalid ulimits:", ulimits)
+	}
+}
+
 func TestDefaults(t *testing.T) {
 	item, err := deserialize("image: defaults")
 	if err != nil {

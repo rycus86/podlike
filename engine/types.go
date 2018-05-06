@@ -74,6 +74,8 @@ type Component struct {
 
 	PidsLimit *int64 `yaml:"pids_limit"`
 
+	Ulimits map[string]interface{}
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
