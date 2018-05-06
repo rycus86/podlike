@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,7 @@ func TestSchema(t *testing.T) {
 	var (
 		fieldRe       = regexp.MustCompile(".* field (.+) not found in type engine.Component")
 		healthcheckRe = regexp.MustCompile(".* field (.+) not found in type engine.Healthcheck")
+		blkioRe       = regexp.MustCompile(".* field (.+) not found in type engine.BlkioConfig")
 	)
 
 	allDefinitions := schema["definitions"].(map[string]interface{})
@@ -47,6 +49,10 @@ func TestSchema(t *testing.T) {
 				unsupported = append(unsupported, fieldRe.ReplaceAllString(e, "$1"))
 			} else if healthcheckRe.MatchString(e) {
 				unsupported = append(unsupported, healthcheckRe.ReplaceAllString(e, "healthcheck.$1"))
+			} else if blkioRe.MatchString(e) {
+				unsupported = append(unsupported, blkioRe.ReplaceAllString(e, "blkio_config.$1"))
+			} else {
+				unsupported = append(unsupported, "? ("+e+")")
 			}
 		}
 
@@ -109,6 +115,16 @@ func processEmbedded(child map[string]interface{}, definitions map[string]interf
 		}
 	}
 
+	if child["type"] == "array" {
+		if items, ok := child["items"]; ok {
+			if itemsDef, ok := items.(map[string]interface{}); ok {
+				*target += prefix + "-\n"
+
+				processEmbedded(itemsDef, definitions, prefix+"  ", target)
+			}
+		}
+	}
+
 	if child["type"] != "object" {
 		return
 	}
@@ -133,9 +149,15 @@ func processEmbedded(child map[string]interface{}, definitions map[string]interf
 }
 
 func processReference(id string, definitions map[string]interface{}, prefix string, target *string) {
-	for _, value := range definitions {
+	for key, value := range definitions {
 		def, ok := value.(map[string]interface{})
-		if !ok || def["id"] != id {
+		if !ok {
+			continue
+		}
+
+		parts := strings.Split(id, "/")
+
+		if def["id"] != id && key != parts[len(parts)-1] {
 			continue
 		}
 

@@ -136,7 +136,6 @@ Some of the open tasks are:
 
 ## Unsupported properties
 
-- `blkio_config`
 - `build`: Only pre-built images are supported
 - `cgroup_parent`: This is set by the controller
 - `container_name`: This is set by the controller

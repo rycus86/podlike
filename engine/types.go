@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/blkiodev"
 	"github.com/docker/docker/client"
 	"time"
 )
@@ -57,6 +58,8 @@ type Component struct {
 	CPUCount           int64   `yaml:"cpu_count"`
 	CPUPercent         int64   `yaml:"cpu_percent"`
 
+	BlkioConfig *BlkioConfig `yaml:"blkio_config"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
@@ -72,6 +75,15 @@ type Healthcheck struct {
 	StartPeriod time.Duration `yaml:"start_period"`
 	Retries     int
 	Disable     bool
+}
+
+type BlkioConfig struct {
+	Weight          uint16
+	WeightDevice    []*blkiodev.WeightDevice   `yaml:"weight_device"`
+	DeviceReadBps   []*blkiodev.ThrottleDevice `yaml:"device_read_bps"`
+	DeviceWriteBps  []*blkiodev.ThrottleDevice `yaml:"device_read_iops"`
+	DeviceReadIOps  []*blkiodev.ThrottleDevice `yaml:"device_write_bps"`
+	DeviceWriteIOps []*blkiodev.ThrottleDevice `yaml:"device_write_iops"`
 }
 
 type ComponentExited struct {

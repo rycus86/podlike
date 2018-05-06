@@ -180,6 +180,15 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		resources.MemoryReservation = *c.MemoryReservation
 	}
 
+	if c.BlkioConfig != nil {
+		resources.BlkioWeight = c.BlkioConfig.Weight
+		resources.BlkioWeightDevice = c.BlkioConfig.WeightDevice
+		resources.BlkioDeviceReadBps = c.BlkioConfig.DeviceReadBps
+		resources.BlkioDeviceWriteBps = c.BlkioConfig.DeviceWriteBps
+		resources.BlkioDeviceReadIOps = c.BlkioConfig.DeviceReadIOps
+		resources.BlkioDeviceWriteIOps = c.BlkioConfig.DeviceWriteIOps
+	}
+
 	hostConfig := container.HostConfig{
 		AutoRemove: true,
 
