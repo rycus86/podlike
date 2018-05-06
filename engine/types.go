@@ -47,6 +47,16 @@ type Component struct {
 	MemorySwappiness  *int64  `yaml:"mem_swappiness"`
 	ShmSize           *string `yaml:"shm_size"`
 
+	CPUShares          int64   `yaml:"cpu_shares"`
+	CPUs               float64 `yaml:"cpus"`
+	CPUPeriod          int64   `yaml:"cpu_period"`
+	CPUQuota           int64   `yaml:"cpu_quota"`
+	CPURealtimePeriod  int64   `yaml:"cpu_rt_period"`
+	CPURealtimeRuntime int64   `yaml:"cpu_rt_runtime"`
+	CpusetCpus         string  `yaml:"cpuset"`
+	CPUCount           int64   `yaml:"cpu_count"`
+	CPUPercent         int64   `yaml:"cpu_percent"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 

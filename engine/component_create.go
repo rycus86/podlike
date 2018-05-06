@@ -164,6 +164,16 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		Memory:           memLimit,
 		MemorySwap:       memSwapLimit,
 		MemorySwappiness: c.MemorySwappiness,
+
+		CPUShares:          c.CPUShares,
+		NanoCPUs:           int64(1000000000 * c.CPUs),
+		CPUPeriod:          c.CPUPeriod,
+		CPUQuota:           c.CPUQuota,
+		CPURealtimePeriod:  c.CPURealtimePeriod,
+		CPURealtimeRuntime: c.CPURealtimeRuntime,
+		CpusetCpus:         c.CpusetCpus,
+		CPUCount:           c.CPUCount,
+		CPUPercent:         c.CPUPercent,
 	}
 
 	if c.MemoryReservation != nil {
