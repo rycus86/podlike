@@ -140,8 +140,6 @@ Some of the open tasks are:
 - `cgroup_parent`: This is set by the controller
 - `container_name`: This is set by the controller
 - `depends_on`: Compose-style dependency is not supported
-- `device_cgroup_rules`
-- `devices`
 - `dns`: DNS management is handled by the controller
 - `dns_opt`: DNS management is handled by the controller
 - `dns_search`: DNS management is handled by the controller

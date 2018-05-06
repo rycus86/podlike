@@ -42,6 +42,9 @@ type Component struct {
 	CapAdd  []string `yaml:"cap_add"`
 	CapDrop []string `yaml:"cap_drop"`
 
+	Devices           []string
+	DeviceCgroupRules []string `yaml:"device_cgroup_rules"`
+
 	MemoryLimit       string  `yaml:"mem_limit"`
 	MemoryReservation *int64  `yaml:"mem_reservation"`
 	MemorySwapLimit   string  `yaml:"memswap_limit"`

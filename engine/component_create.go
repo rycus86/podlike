@@ -146,6 +146,11 @@ func (c *Component) newContainerConfig() (*container.Config, error) {
 }
 
 func (c *Component) newHostConfig(configuration *config.Configuration) (*container.HostConfig, error) {
+	devices, err := asDeviceMappings(c.Devices)
+	if err != nil {
+		return nil, err
+	}
+
 	memLimit, err := c.getMemoryLimit()
 	if err != nil {
 		return nil, err
@@ -160,6 +165,9 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		CgroupParent: c.client.cgroup,
 
 		OomKillDisable: c.OomKillDisable,
+
+		Devices:           devices,
+		DeviceCgroupRules: c.DeviceCgroupRules,
 
 		Memory:           memLimit,
 		MemorySwap:       memSwapLimit,
