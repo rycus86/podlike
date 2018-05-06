@@ -52,6 +52,8 @@ type Component struct {
 	Devices           []string
 	DeviceCgroupRules []string `yaml:"device_cgroup_rules"`
 
+	Isolation string
+
 	MemoryLimit       string  `yaml:"mem_limit"`
 	MemoryReservation *int64  `yaml:"mem_reservation"`
 	MemorySwapLimit   string  `yaml:"memswap_limit"`

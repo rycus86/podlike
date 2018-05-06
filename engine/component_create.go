@@ -220,6 +220,8 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		SecurityOpt: c.SecurityOpt,
 		StorageOpt:  c.StorageOpt,
 		UsernsMode:  container.UsernsMode(c.UsernsMode),
+
+		Isolation: container.Isolation(c.Isolation),
 	}
 
 	if c.Tmpfs != nil {

@@ -151,7 +151,6 @@ Some of the open tasks are:
 - `hostname`: Networking is handled by the controller
 - `init`: Not supported, the controller *attempts* to take care of it
 - `ipc`: IPC is set by the controller
-- `isolation`
 - `links`: Container links are not supported
 - `logging`
 - `mac_address`: Networking is handled by the controller
