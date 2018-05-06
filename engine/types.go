@@ -33,14 +33,21 @@ type Component struct {
 	StopSignal      string        `yaml:"stop_signal"`
 	StopGracePeriod time.Duration `yaml:"stop_grace_period"`
 	User            string
+	Runtime         string
+	Tmpfs           interface{}
 
 	Healthcheck *Healthcheck
 
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`
 	OomKillDisable *bool `yaml:"oom_kill_disable"`
 
-	CapAdd  []string `yaml:"cap_add"`
-	CapDrop []string `yaml:"cap_drop"`
+	CapAdd      []string          `yaml:"cap_add"`
+	CapDrop     []string          `yaml:"cap_drop"`
+	GroupAdd    []string          `yaml:"group_add"`
+	SecurityOpt []string          `yaml:"security_opt"`
+	StorageOpt  map[string]string `yaml:"storage_opt"`
+	Sysctls     interface{}
+	UsernsMode  string `yaml:"userns_mode"`
 
 	Devices           []string
 	DeviceCgroupRules []string `yaml:"device_cgroup_rules"`
@@ -63,8 +70,7 @@ type Component struct {
 
 	BlkioConfig *BlkioConfig `yaml:"blkio_config"`
 
-	GroupAdd   []string `yaml:"group_add"`
-	UsernsMode string   `yaml:"userns_mode"`
+	PidsLimit *int64 `yaml:"pids_limit"`
 
 	// the parent client to the engine
 	client *Client `yaml:"-"`

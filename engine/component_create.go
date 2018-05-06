@@ -197,6 +197,10 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		resources.BlkioDeviceWriteIOps = c.BlkioConfig.DeviceWriteIOps
 	}
 
+	if c.PidsLimit != nil {
+		resources.PidsLimit = *c.PidsLimit
+	}
+
 	hostConfig := container.HostConfig{
 		AutoRemove: true,
 
@@ -208,11 +212,23 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 
 		Privileged:     c.Privileged,
 		ReadonlyRootfs: c.ReadOnly,
+		Runtime:        c.Runtime,
 
 		OomScoreAdj: c.getOomScoreAdjust(),
 
-		GroupAdd:   c.GroupAdd,
-		UsernsMode: container.UsernsMode(c.UsernsMode),
+		GroupAdd:    c.GroupAdd,
+		SecurityOpt: c.SecurityOpt,
+		StorageOpt:  c.StorageOpt,
+		UsernsMode:  container.UsernsMode(c.UsernsMode),
+	}
+
+	if c.Tmpfs != nil {
+		tmpfs, err := asStringToStringMap(c.Tmpfs)
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.Tmpfs = tmpfs
 	}
 
 	if c.ShmSize != nil {
@@ -240,6 +256,15 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		}
 
 		hostConfig.CapDrop = capabilitiesToDrop
+	}
+
+	if c.Sysctls != nil {
+		sysctls, err := asStringToStringMap(c.Sysctls)
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.Sysctls = sysctls
 	}
 
 	if configuration.SharePids {
