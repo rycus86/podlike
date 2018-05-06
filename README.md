@@ -148,7 +148,6 @@ Some of the open tasks are:
 - `extends`: Compose-style extends are not supported
 - `external_links`: Container links are not supported
 - `extra_hosts`: Networking is handled by the controller
-- `group_add`
 - `hostname`: Networking is handled by the controller
 - `init`: Not supported, the controller *attempts* to take care of it
 - `ipc`: IPC is set by the controller
@@ -170,7 +169,6 @@ Some of the open tasks are:
 - `sysctls`
 - `tmpfs`
 - `ulimits`
-- `userns_mode`
 - `volume_driver`: *Currently* managed by the controller, using `volumes_from`
 - `volumes`: *Currently* set by the controller, using `volumes_from`
 - `volumes_from`: *Currently* set by the controller

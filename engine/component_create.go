@@ -210,6 +210,9 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		ReadonlyRootfs: c.ReadOnly,
 
 		OomScoreAdj: c.getOomScoreAdjust(),
+
+		GroupAdd:   c.GroupAdd,
+		UsernsMode: container.UsernsMode(c.UsernsMode),
 	}
 
 	if c.ShmSize != nil {

@@ -63,6 +63,9 @@ type Component struct {
 
 	BlkioConfig *BlkioConfig `yaml:"blkio_config"`
 
+	GroupAdd   []string `yaml:"group_add"`
+	UsernsMode string   `yaml:"userns_mode"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
