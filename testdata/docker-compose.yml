@@ -1,0 +1,17 @@
+version: '2'
+services:
+
+  # sample app with HTML responses
+  app:
+    image: rycus86/demo-site
+    environment:
+      - HTTP_HOST=127.0.0.1
+      - HTTP_PORT=12000
+
+  # caching reverse proxy
+  proxy:
+    image: nginx:1.13.10
+    ports:
+      - 8080:80
+    volumes:
+      - ./compose-sample-nginx.conf:/etc/nginx/conf.d/default.conf

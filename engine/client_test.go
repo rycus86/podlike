@@ -45,6 +45,47 @@ func TestOneComponent(t *testing.T) {
 	}
 }
 
+func TestComposeProject(t *testing.T) {
+	components, err := newTestClient(map[string]string{
+		"pod.compose.file": "../testdata/docker-compose.yml",
+	}, nil, nil).GetComponents()
+
+	if err != nil {
+		t.Error("Failed to get components", err)
+	}
+
+	if len(components) != 2 {
+		t.Error("Unexpected number of components:", len(components))
+	}
+
+	for _, c := range components {
+		if c.Name == "app" {
+			if c.Image != "rycus86/demo-site" {
+				t.Error("Unexpected image:", c.Image)
+			}
+
+			env, err := asStringToStringMap(c.Environment)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if host, ok := env["HTTP_HOST"]; !ok || host != "127.0.0.1" {
+				t.Error("Unexpected environment variables:", c.Environment)
+			}
+
+			if port, ok := env["HTTP_PORT"]; !ok || port != "12000" {
+				t.Error("Unexpected environment variables:", c.Environment)
+			}
+		} else if c.Name == "proxy" {
+			if c.Image != "nginx:1.13.10" {
+				t.Error("Unexpected image:", c.Image)
+			}
+		} else {
+			t.Error("Unexpected component name:", c.Name)
+		}
+	}
+}
+
 func TestStartComponent(t *testing.T) {
 	labels := map[string]string{
 		"pod.component.start": `

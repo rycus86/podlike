@@ -109,6 +109,10 @@ type LoggingConfig struct {
 	Options map[string]string
 }
 
+type ComposeProject struct {
+	Services map[string]Component
+}
+
 type ComponentExited struct {
 	Component *Component
 

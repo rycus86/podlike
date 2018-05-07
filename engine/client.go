@@ -19,16 +19,42 @@ func (c *Client) GetComponents() ([]*Component, error) {
 
 	for key, value := range c.container.Config.Labels {
 		if strings.Index(key, "pod.component.") >= 0 {
-			var item Component
+			var component Component
 
-			err := yaml.UnmarshalStrict([]byte(value), &item)
+			err := yaml.UnmarshalStrict([]byte(value), &component)
 			if err != nil {
 				return nil, err
-			} else {
-				item.init(strings.TrimPrefix(key, "pod.component."), c)
-
-				components = append(components, &item)
 			}
+
+			component.init(strings.TrimPrefix(key, "pod.component."), c)
+
+			components = append(components, &component)
+		}
+	}
+
+	if composeFile, ok := c.container.Config.Labels["pod.compose.file"]; ok {
+		if len(components) > 0 {
+			return nil, errors.New(
+				"either the individual components or a compose file should be defined, but not both")
+		}
+
+		composeContents, err := ioutil.ReadFile(composeFile)
+		if err != nil {
+			return nil, err
+		}
+
+		var project ComposeProject
+
+		err = yaml.Unmarshal(composeContents, &project)
+		if err != nil {
+			return nil, err
+		}
+
+		for name, item := range project.Services {
+			component := item
+			component.init(name, c)
+
+			components = append(components, &component)
 		}
 	}
 

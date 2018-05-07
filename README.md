@@ -103,6 +103,8 @@ See the [examples folder](https://github.com/rycus86/podlike/tree/master/example
 
 The properties of each component are the same ones a Compose project would accept, minus the unsupported ones (see below). This should make it easy to convert a Compose file into the configuration this app needs as a `pod.component.` label.
 
+To make this even easier, you can specify a Compose file to configure the components from, using the `pod.compose.file` label, which needs to point to a file inside the controller container. This will ignore any properties the app doesn't support, like ports, networking configuration, etc. (see below). This means, if you have a working Compose project, you're likely to be able to use it to feed the app, even without dropping the unsupported properties. You may still need to change things to work better as a group though.
+
 ## Dragons!
 
 This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
