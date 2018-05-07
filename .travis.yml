@@ -37,8 +37,11 @@ jobs:
         - |
           echo ${DOCKER_PASSWORD} | docker login --username "rycus86" --password-stdin
           if [ "$TRAVIS_BRANCH" == "master" ]; then
-              docker tag podlike:$DOCKER_TAG rycus86/podlike:$DOCKER_TAG
-              docker push rycus86/podlike:$DOCKER_TAG
+              docker tag podlike:${DOCKER_TAG} rycus86/podlike:${DOCKER_TAG}
+              docker push rycus86/podlike:${DOCKER_TAG}
+          else
+              docker tag podlike:${DOCKER_TAG} rycus86/podlike:${TRAVIS_BRANCH}-${DOCKER_TAG}
+              docker push rycus86/podlike:${TRAVIS_BRANCH}-${DOCKER_TAG}
           fi
       env:
         - DOCKER_TAG=amd64
@@ -60,6 +63,11 @@ jobs:
     - stage: manifest
       sudo: required
       script:
+        - |
+          if [ "$TRAVIS_BRANCH" != "master" ]; then
+              sed -i "s#rycus86/podlike:#rycus86/podlike:${TRAVIS_BRANCH}-#" manifest.yml
+              sed -i "s#rycus86/podlike:${TRAVIS_BRANCH}-latest#rycus86/podlike:${TRAVIS_BRANCH}#" manifest.yml
+          fi
         - echo ${DOCKER_PASSWORD} | docker login --username "rycus86" --password-stdin
         - curl -fsSL https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64 > ./manifest-tool
         - chmod +x ./manifest-tool
