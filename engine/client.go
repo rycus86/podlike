@@ -18,14 +18,14 @@ func (c *Client) GetComponents() ([]*Component, error) {
 	var components []*Component
 
 	for key, value := range c.container.Config.Labels {
-		if strings.Index(key, "pod.container.") >= 0 {
+		if strings.Index(key, "pod.component.") >= 0 {
 			var item Component
 
 			err := yaml.UnmarshalStrict([]byte(value), &item)
 			if err != nil {
 				return nil, err
 			} else {
-				item.init(strings.TrimPrefix(key, "pod.container."), c)
+				item.init(strings.TrimPrefix(key, "pod.component."), c)
 
 				components = append(components, &item)
 			}

@@ -19,7 +19,7 @@ type verifyCreate struct {
 
 func TestOneComponent(t *testing.T) {
 	components, err := newTestClient(map[string]string{
-		"pod.container.single": "{image: sample, command: a b c}",
+		"pod.component.single": "{image: sample, command: a b c}",
 	}, nil, nil).GetComponents()
 
 	if err != nil {
@@ -47,7 +47,7 @@ func TestOneComponent(t *testing.T) {
 
 func TestStartComponent(t *testing.T) {
 	labels := map[string]string{
-		"pod.container.start": `
+		"pod.component.start": `
 image: sample
 command: echo test
 `}

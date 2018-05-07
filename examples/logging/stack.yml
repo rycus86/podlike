@@ -7,7 +7,7 @@ services:
     # -volumes is on by default, so could be omitted
     # to disable volume sharing, use -volumes=false
     labels:
-      pod.container.logger: |
+      pod.component.logger: |
         image: python:2.7-alpine
         command: |
           python -c "
@@ -47,7 +47,7 @@ services:
 
           print '>>> OK, bye!'
           "
-      pod.container.tail: |
+      pod.component.tail: |
         image: alpine
         command: tail -F /var/log/example.log
     volumes:

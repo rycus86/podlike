@@ -7,7 +7,7 @@ services:
     # -pids is on by default, so could be omitted
     # PID sharing can be disabled with -pids=false if ever needed
     labels:
-      pod.container.hello: |
+      pod.component.hello: |
         image: python:2.7-alpine
         environment:
           - PYTHONUNBUFFERED=1
@@ -28,7 +28,7 @@ services:
           while True:
               time.sleep(60)  # just wait here
           "
-      pod.container.ping: |
+      pod.component.ping: |
         image: python:2.7-alpine
         environment:
           - PYTHONUNBUFFERED=1

@@ -45,7 +45,7 @@ By sharing a local volume for multiple containers, one could generate configurat
 
 ## Configuration
 
-The controller needs to run inside a Docker containers, and it needs access to the Docker engine through the API (either UNIX socket, TCP, etc.). The list of components comes from __container__ labels (not service labels). These labels need to start with `pod.container.`
+The controller needs to run inside a Docker containers, and it needs access to the Docker engine through the API (either UNIX socket, TCP, etc.). The list of components comes from __container__ labels (not service labels). These labels need to start with `pod.component.`
 
 For example:
 
@@ -58,13 +58,13 @@ services:
     command: -logs
     labels:
       # sample app with HTML responses
-      pod.container.app: |
+      pod.component.app: |
         image: rycus86/demo-site
         environment:
           - HTTP_HOST=127.0.0.1
           - HTTP_PORT=12000
       # caching reverse proxy
-      pod.container.proxy: |
+      pod.component.proxy: |
         image: nginx:1.13.10
       # copy the config file for the proxy
       pod.copy.proxy: /var/conf/nginx.conf:/etc/nginx/conf.d/default.conf
@@ -88,12 +88,12 @@ Or as a simple container for testing:
 $ docker run --rm -it --name podtest                      \
     -v /var/run/docker.sock:/var/run/docker.sock:ro       \
     -v $PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro  \
-    --label pod.container.app='
+    --label pod.component.app='
 image: rycus86/demo-site
 environment:
   - HTTP_HOST=127.0.0.1
   - HTTP_PORT=12000'                                      \
-    --label pod.container.proxy='
+    --label pod.component.proxy='
 image: nginx:1.13.10'                                     \
     -p 8080:80                                            \
     rycus86/podlike -logs
@@ -101,13 +101,17 @@ image: nginx:1.13.10'                                     \
 
 See the [examples folder](https://github.com/rycus86/podlike/tree/master/examples) with more, small example stacks.
 
+The properties of each component are the same ones a Compose project would accept, minus the unsupported ones (see below). This should make it easy to convert a Compose file into the configuration this app needs as a `pod.component.` label.
+
 ## Dragons!
 
 This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
 
 I'm not yet sure how the components' containers will interfere with Swarm scheduling, resource allocation, etc. Memory limits are honored, but the components are limited to the controller's limits at most. Memory reservation is allowed on the components if you really want to, but comes with a warning. If you set the reservation on the controller, the cgroup should take note of this for you for all the containers.
 
-The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well (unless volume sharing is disabled with `-volumes=false`.
+I also haven't done extensive testing on other resource constraints, in terms of how they behave when running as part of a shared cgroup. For example, CPU and I/O (`blkio`) limits, ulimits, etc. Not sure yet how these settings would affect things overall, and the app doesn't necessarily try to validate them for you, so at this point, you'll have to try and see for yourself. *But do let me know how it goes, please!*
+
+The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well, unless volume sharing is disabled with `-volumes=false`.
 
 Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
 
