@@ -15,7 +15,7 @@ $ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/h
 Then you can check the health-check output:
 
 ```shell
-$ curl -s http://127.0.0.1/healthz
+$ curl -s http://127.0.0.1:8080/healthz
 ```
 
 Or try it on the [Docker Playground](https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/rycus86/podlike/master/examples/healthz/stack.yml&stack_name=healthz).
