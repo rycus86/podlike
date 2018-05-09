@@ -43,6 +43,12 @@ By sharing a local volume for multiple containers, one could generate configurat
 
 *See also the [volume example](https://github.com/rycus86/podlike/tree/master/examples/volume)*
 
+5. Health-checks
+
+This example modernizes an application, by providing a composite HTTP health-check endpoint for a Java application, that only exposes liveness on JMX.
+
+*See also the [volume example](https://github.com/rycus86/podlike/tree/master/examples/healthz)*
+
 ## Configuration
 
 The controller needs to run inside a Docker containers, and it needs access to the Docker engine through the API (either UNIX socket, TCP, etc.). The list of components comes from __container__ labels (not service labels). These labels need to start with `pod.component.`

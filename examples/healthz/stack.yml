@@ -1,0 +1,30 @@
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    healthcheck:
+      # give the health-check a bit more time
+      start_period: 15s
+    labels:
+      # a legacy app, exposing a JMX health-check (sort of)
+      pod.component.app: |
+        image: rycus86/sample-jmx-app
+        environment:
+          - OUTPUT_TARGET=/var/shared/progress.txt
+      # JMX to HTTP exporter
+      pod.component.exporter: |
+        image: rycus86/sample-jmx-exporter
+        command: 5556 /var/conf/exporter.yml
+      # aggregated healthcheck endpoint
+      pod.component.goss: |
+        image: rycus86/sample-jmx-healthz
+    # publish the healthcheck endpoint
+    ports:
+      - 8080:8080
+    volumes:
+      - shared:/var/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  shared:

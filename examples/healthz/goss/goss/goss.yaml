@@ -1,0 +1,27 @@
+process:
+  java:
+    running: true
+
+http:
+  http://localhost:5556/metrics:
+    status: 200
+    timeout: 2000
+    body:
+      - com_rycus86_example_Status_Alive 1
+
+file:
+  /var/shared/progress.txt:
+    exists: true
+    contains:
+      - Written at
+
+command:
+  ps aux:
+    exit-status: 0
+    stdout:
+      - '/.*java .* Application/'
+
+  find /var/shared/ -type f -mtime -1:
+    exit-status: 0
+    stdout:
+      - /var/shared/progress.txt

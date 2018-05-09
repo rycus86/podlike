@@ -49,8 +49,8 @@ func run(components []*engine.Component) {
 			done(components)
 			return
 
-		case <-signalChan:
-			fmt.Println("Exiting...")
+		case s := <-signalChan:
+			fmt.Printf("Exiting [%s] ...\n", s.String())
 
 			done(components)
 			return
