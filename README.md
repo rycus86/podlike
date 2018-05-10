@@ -138,6 +138,7 @@ Some of the open tasks are:
 - [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
 - [ ] Support for additional volumes - does it work with `volumes-from` ?
 - [ ] Consider adding a `pause` container
+- [ ] Consider using a proper `init` process
 - [ ] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
 - [x] Support for most settings for the components *based on Composefile keys*
 - [x] CPU limits and reservation
@@ -166,7 +167,7 @@ Some of the open tasks are:
 - `hostname`: Networking is handled by the controller
 - `init`: Not supported, the controller *attempts* to take care of it
 - `ipc`: IPC is set by the controller
-- `links`: Container links are not supported
+- `links`: Container links are not supported, and are probably not needed
 - `mac_address`: Networking is handled by the controller
 - `network_mode`: Network mode is set by the controller
 - `networks`: Assign networks through the Swarm service
