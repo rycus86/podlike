@@ -73,7 +73,8 @@ services:
       pod.component.proxy: |
         image: nginx:1.13.10
       # copy the config file for the proxy
-      pod.copy.proxy: /var/conf/nginx.conf:/etc/nginx/conf.d/default.conf
+      pod.copy.proxy: >
+        /var/conf/nginx.conf:/etc/nginx/conf.d/default.conf
     configs:
       - source: nginx-conf
         target: /var/conf/nginx.conf
@@ -109,7 +110,7 @@ See the [examples folder](https://github.com/rycus86/podlike/tree/master/example
 
 The properties of each component are the same ones a Compose project would accept, minus the unsupported ones (see below). This should make it easy to convert a Compose file into the configuration this app needs as a `pod.component.` label.
 
-To make this even easier, you can specify a Compose file to configure the components from, using the `pod.compose.file` label, which needs to point to a file inside the controller container. This will ignore any properties the app doesn't support, like ports, networking configuration, etc. (see below). This means, if you have a working Compose project, you're likely to be able to use it to feed the app, even without dropping the unsupported properties. You may still need to change things to work better as a group though.
+To make this more convenient, you can specify a Compose file to configure the components from, using the `pod.compose.file` label, which needs to point to a file inside the controller container. This will ignore any properties the app doesn't support, like ports, networking configuration, etc. (see below). This means, if you have a working Compose project, you're likely to be able to use it to feed the app, even without dropping the unsupported properties. You may still want to change things to work better as a group though.
 
 ## Dragons!
 
@@ -121,7 +122,7 @@ I also haven't done extensive testing on other resource constraints, in terms of
 
 The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well, unless volume sharing is disabled with `-volumes=false`.
 
-Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
+Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller *(see examples on how to define this in YAML [here](https://github.com/rycus86/podlike/blob/master/engine/component_copy_test.go))*. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
 
 Component reaping is done on a best-effort basis, killing the controller could leave you with zombie containers. With the components placed within the controller's cgroup, plus with PID sharing enabled, this is probably somewhat mitigated, but you could still potentialy end up having containers using memory and CPU after the controller dies. The components are also started with auto-remove, so getting information about them post-mortem might prove difficult.
 

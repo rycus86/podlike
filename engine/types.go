@@ -119,3 +119,8 @@ type ComponentExited struct {
 	StatusCode int64
 	Error      error
 }
+
+type CopyConfig struct {
+	Source string
+	Target string
+}
