@@ -15,6 +15,8 @@ By default, these are also shared, but optional:
 - PID namespace
 - Volumes
 
+*Check out the [blog post](https://blog.viktoradam.net/2018/05/14/podlike/) for a much more detailed introduction!*
+
 ## Use-cases
 
 So, why would we want to do this on Docker Swarm?
