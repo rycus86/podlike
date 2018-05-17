@@ -1,0 +1,103 @@
+version: '3.5'
+services:
+
+  add:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      pod.component.app: |
+        image: python:2.7-alpine
+        command: |
+          python -c "
+          import re
+          from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  result = sum(
+                      int(x) for x in self.path.split('/') if re.match('^-?[0-9]+$$', x)
+                  )
+
+                  self.send_response(200)
+                  self.end_headers()
+                  self.wfile.write('%d\\n' % result)
+
+          HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+          "
+      pod.component.traefik: |
+        image: traefik
+        command: >
+          --debug
+          --api --api.dashboard
+          --metrics.prometheus
+          --consulcatalog
+          --consulcatalog.watch
+          --consulcatalog.trace
+          --consulcatalog.prefix=svc.add
+          --consulcatalog.exposedbydefault=false
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --consulcatalog.frontendrule='PathPrefixStrip: /{{.ServiceName}}'
+      pod.component.consul-agent: |
+        image: consul
+        command: agent -join=consul -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth2
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "service": {
+                "name": "add",
+                "tags": [
+                  "svc.add.enable=true"
+                ],
+                "address": "",
+                "meta": {},
+                "port": 5000,
+                "checks": [
+                  {
+                    "args": [
+                      "sh", "-c", "pgrep python"
+                    ],
+                    "interval": "2s",
+                    "status": "passing"
+                  },
+                  {
+                    "args": [
+                      "sh", "-c", "pgrep traefik"
+                    ],
+                    "interval": "2s",
+                    "status": "passing"
+                  }
+                ]
+              }
+            }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 5001:5000
+      - 8001:8080
+
+  router:
+    image: traefik
+    command: >
+      --debug
+      --api --api.dashboard
+      --metrics.prometheus
+      --consulcatalog
+      --consulcatalog.watch
+      --consulcatalog.trace
+      --consulcatalog.exposedbydefault=true
+      --consulcatalog.endpoint=consul:8500
+      --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+    ports:
+      - 8080:8080
+      - 80:80
+
+  consul:
+    image: consul
+    environment:
+      CONSUL_BIND_INTERFACE: eth2
+      CONSUL_LOCAL_CONFIG: |
+        {}
+    ports:
+      - 8500:8500
+
