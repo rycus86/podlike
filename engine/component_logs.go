@@ -31,6 +31,10 @@ func (c *Component) streamLogs() {
 				return
 			}
 
+			if len(out) < 8 {
+				continue
+			}
+
 			streamType := "out"
 			if out[0] == 2 {
 				streamType = "err"
