@@ -1,0 +1,42 @@
+{
+  "services": [
+    {
+      "name": "v1",
+      "tags": ["traefik.tags=external"],
+      "port": 80,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    },
+    {
+      "name": "local-v1-calc",
+      "tags": [
+        "traefik.tags=calc",
+        "traefik.frontend.rule=PathPrefixStrip: /v1"
+      ],
+      "address": "127.0.0.1",
+      "port": 5000,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    }
+  ]
+}

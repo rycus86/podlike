@@ -1,0 +1,46 @@
+{
+  "services": [
+    {
+      "name": "v2/add",
+      "tags": ["traefik.tags=external,calc"],
+      "port": 80,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    },
+    {
+      "name": "local-v2-add",
+      "tags": [
+        "add.tags=internal",
+        "add.frontend.rule=PathPrefixStrip: /v2/add",
+        "add.frontend.rateLimit.extractorFunc=client.ip",
+        "add.frontend.rateLimit.rateSet.rateSet1.average=10",
+        "add.frontend.rateLimit.rateSet.rateSet1.burst=15",
+        "add.frontend.rateLimit.rateSet.rateSet1.period=3s"
+      ],
+      "address": "127.0.0.1",
+      "port": 5000,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    }
+  ]
+}

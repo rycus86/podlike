@@ -1,0 +1,60 @@
+@startuml
+
+title DYI HTTP service mesh on Swarm
+
+frame calc << podlike >> #c9ffc9 {
+  [app] << Python >> as calc_app #ff9090
+  [router] << Traefik >> as calc_router #9090ff
+  [service discovery] << Consul [agent] >> as calc_sd #50ff50
+  
+  calc_router --> calc_sd #090 : read routing\ninformation
+  calc_router --> calc_app #33f : HTTP
+  calc_router <.. calc_app #33f : HTTP\ninter-service
+}
+
+frame add << podlike >> #c9ffc9 {
+  [app] << Python >> as add_app #ff9090
+  [router] << Traefik >> as add_router #9090ff
+  [service discovery] << Consul [agent] >> as add_sd #50ff50
+  
+  add_router --> add_sd #090 : read routing\ninformation
+  add_router --> add_app #33f : HTTP
+}
+
+frame sub << podlike >> #c9ffc9 {
+  [app] << Python >> as sub_app #ff9090
+  [router] << Traefik >> as sub_router #9090ff
+  [service discovery] << Consul [agent] >> as sub_sd #50ff50
+  
+  sub_router --> sub_sd #090 : read routing\ninformation
+  sub_router --> sub_app #33f : HTTP
+}
+
+[external router] << Traefik >> as router #9090ff
+[service discovery] << Consul [server] >> as sd #50ff50
+[tracing] << Zipkin >> as tracing #e9e950
+
+actor "user requests" as usr
+
+' communication flows:
+
+usr --> router #33f : HTTP
+
+router =l==> calc_router #33f : HTTP
+router ====> add_router #33f : HTTP
+router =r==> sub_router #33f : HTTP
+
+calc_router --> add_router #33f : HTTP
+calc_router --> sub_router #33f : HTTP
+
+router .u.> tracing #640 : report\ntraces
+calc_router .u.> tracing #640 : report\ntraces
+add_router .u.> tracing #640 : report\ntraces
+sub_router .u.> tracing #640 : report\ntraces
+
+sd <-u--- router #090 : read routing\ninformation
+sd <-u- calc_sd #090 : report\nservices\n& health
+sd <-- add_sd #090 : report\nservices\n& health
+sd <-- sub_sd #090 : report\nservices\n& health
+
+@enduml

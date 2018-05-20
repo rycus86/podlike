@@ -47,9 +47,15 @@ By sharing a local volume for multiple containers, one could generate configurat
 
 5. Health-checks
 
-This example modernizes an application, by providing a composite HTTP health-check endpoint for a Java application, that only exposes liveness on JMX.
+The example on the link below modernizes an application, by providing a composite HTTP health-check endpoint for a Java application, that only exposes liveness on JMX.
 
 *See also the [volume example](https://github.com/rycus86/podlike/tree/master/examples/healthz)*
+
+6. Service meshes
+
+Applications should implement business logic. With service meshes, we can externalize service discovery, routing, tracing concerns, and much more.
+
+*See also the [service mesh example](https://github.com/rycus86/podlike/tree/master/examples/service-mesh)*
 
 ## Configuration
 

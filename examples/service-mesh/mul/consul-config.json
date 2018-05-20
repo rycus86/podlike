@@ -1,0 +1,46 @@
+{
+  "services": [
+    {
+      "name": "v2/mul",
+      "tags": ["traefik.tags=external,calc"],
+      "port": 80,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    },
+    {
+      "name": "local-v2-mul",
+      "tags": [
+        "mul.tags=internal",
+        "mul.frontend.rule=PathPrefixStrip: /v2/mul",
+        "mul.frontend.rateLimit.extractorFunc=client.ip",
+        "mul.frontend.rateLimit.rateSet.rateSet1.average=10",
+        "mul.frontend.rateLimit.rateSet.rateSet1.burst=15",
+        "mul.frontend.rateLimit.rateSet.rateSet1.period=3s"
+      ],
+      "address": "127.0.0.1",
+      "port": 5000,
+      "checks": [
+        {
+          "args": ["sh", "-c", "pgrep python"],
+          "interval": "2s",
+          "status": "passing"
+        },
+        {
+          "args": ["sh", "-c", "pgrep traefik"],
+          "interval": "2s",
+          "status": "passing"
+        }
+      ]
+    }
+  ]
+}

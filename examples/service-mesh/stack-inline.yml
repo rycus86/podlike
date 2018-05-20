@@ -1,0 +1,324 @@
+version: '3.5'
+services:
+
+  # our legacy calculator application
+  calc:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      pod.component.app: |
+        image: python:2.7-alpine
+        command: |
+          python -c
+          "
+          import urllib2
+          from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  parts = [p for p in self.path.split('/') if p]
+                  op = parts[0]
+
+                  if op == 'add':
+                      result = urllib2.urlopen(
+                          urllib2.Request(
+                              'http://localhost/v2/add/%s' % '/'.join(parts[1:]),
+                              headers=self.headers)
+                      ).read()
+                  elif op == 'mul':
+                      result = urllib2.urlopen(
+                          urllib2.Request(
+                              'http://localhost/v2/mul/%s' % '/'.join(parts[1:]),
+                              headers=self.headers)
+                      ).read()
+                  elif op == 'sub':
+                      result = int(parts[1]) - int(parts[2])
+                  elif op == 'div':
+                      result = float(parts[1]) / float(parts[2])
+                  else:
+                      result = 'unknown'
+
+                  self.send_response(200)
+                  self.end_headers()
+                  self.wfile.write('%s\\n' % str(result).strip())
+
+          HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+          "
+      pod.component.traefik: |
+        image: traefik
+        command: >
+          --consulcatalog
+          --consulcatalog.watch
+          --consulcatalog.constraints='tag==calc'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+          --tracing.backend=zipkin
+          --tracing.zipkin
+          --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+          --tracing.servicename=v1/calc
+      pod.component.consul-agent: |
+        image: consul
+        command: agent -join=consul -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "v1",
+                  "tags": ["traefik.tags=external"],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-v1-calc",
+                  "tags": [
+                    "traefik.tags=calc",
+                    "traefik.frontend.rule=PathPrefixStrip: /v1"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # the new service for the add operation
+  add:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      pod.component.app: |
+        image: python:2.7-alpine
+        command: |
+          python -c "
+          import re
+          from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  result = sum(
+                      int(x) for x in self.path.split('/') if re.match('^-?[0-9]+$$', x)
+                  )
+
+                  self.send_response(200)
+                  self.end_headers()
+                  self.wfile.write('%d\\n' % result)
+
+          HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+          "
+      pod.component.traefik: |
+        image: traefik
+        command: >
+          --consulcatalog
+          --consulcatalog.watch
+          --consulcatalog.prefix=add
+          --consulcatalog.constraints='tag==internal'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --tracing.backend=zipkin
+          --tracing.zipkin
+          --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+          --tracing.servicename=v2/add
+      pod.component.consul-agent: |
+        image: consul
+        command: agent -join=consul -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "v2/add",
+                  "tags": ["traefik.tags=external,calc"],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-v2-add",
+                  "tags": [
+                    "add.tags=internal",
+                    "add.frontend.rule=PathPrefixStrip: /v2/add",
+                    "add.frontend.rateLimit.extractorFunc=client.ip",
+                    "add.frontend.rateLimit.rateSet.rateSet1.average=10",
+                    "add.frontend.rateLimit.rateSet.rateSet1.burst=15",
+                    "add.frontend.rateLimit.rateSet.rateSet1.period=3s"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # the new service for the multiply operation
+  mul:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      pod.component.app: |
+        image: python:2.7-alpine
+        command: |
+          python -c "
+          import re
+          from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  result = reduce(
+                      lambda x, y: x * y, (int(x) for x in self.path.split('/') if re.match('^-?[0-9]+$$', x))
+                  )
+
+                  self.send_response(200)
+                  self.end_headers()
+                  self.wfile.write('%d\\n' % result)
+
+          HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+          "
+      pod.component.traefik: |
+        image: traefik
+        command: >
+          --consulcatalog
+          --consulcatalog.watch
+          --consulcatalog.prefix=mul
+          --consulcatalog.constraints='tag==internal'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --tracing.backend=zipkin
+          --tracing.zipkin
+          --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+          --tracing.servicename=v2/mul
+      pod.component.consul-agent: |
+        image: consul
+        command: agent -join=consul -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "v2/mul",
+                  "tags": ["traefik.tags=external,calc"],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-v2-mul",
+                  "tags": [
+                    "mul.tags=internal",
+                    "mul.frontend.rule=PathPrefixStrip: /v2/mul",
+                    "mul.frontend.rateLimit.extractorFunc=client.ip",
+                    "mul.frontend.rateLimit.rateSet.rateSet1.average=10",
+                    "mul.frontend.rateLimit.rateSet.rateSet1.burst=15",
+                    "mul.frontend.rateLimit.rateSet.rateSet1.period=3s"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # reverse proxy for external requests
+  router:
+    image: traefik
+    command: >
+      --api --api.dashboard --metrics.prometheus
+      --tracing.backend=zipkin
+      --tracing.zipkin
+      --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+      --tracing.servicename=router
+      --consulcatalog
+      --consulcatalog.watch
+      --consulcatalog.constraints='tag==external'
+      --consulcatalog.endpoint=consul:8500
+      --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+    ports:
+      - 8080:8080
+      - 80:80
+
+  # the main Consul server
+  consul:
+    image: consul
+    environment:
+      CONSUL_BIND_INTERFACE: eth2
+    ports:
+      - 8500:8500
+
+  # request trace collector
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - 9411:9411
+    environment:
+      STORAGE_TYPE: mem
