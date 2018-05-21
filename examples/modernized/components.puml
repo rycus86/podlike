@@ -1,0 +1,86 @@
+@startuml
+
+frame Aggregator {
+    [app] as A << flask >> #9f9
+    [proxy] as Ap << traefik >> #99f
+    [service discovery] as Ac << consul >> #ee3
+    [tracing] as At << jaeger-agent >> #3ee
+    [log agent] as Al << fluent-bit >> #999
+
+    Ap .> A : Forward\nrequests
+    A .> Ap : Requests to\nother services
+    
+    Ap .. Ac
+    Ap .. At
+}
+
+frame "Data server" {
+    [app] as D << flask >> #9f9
+    [proxy] as Dp << traefik >> #99f
+    [KV store &\n service discovery] as Dc << consul >> #ee3
+    [tracing] as Dt << jaeger-agent >> #3ee
+    [log agent] as Dl << fluent-bit >> #999
+
+    Dp .> D : Forward\nrequests
+    D .> Dp : Requests to\nthe KV store\n& static content
+    
+    Dp .. Dt
+}
+
+frame Renderer {
+    [app] as R << flask >> #9f9
+    [proxy] as Rp << traefik >> #99f
+    [service discovery] as Rc << consul >> #ee3
+    [tracing] as Rt << jaeger-agent >> #3ee
+    [log agent] as Rl << fluent-bit >> #999
+
+    Rp .> R : Forward\nrequests
+    
+    Rp .. Rc
+    Rp .. Rt
+}
+
+[static content] as SC << nginx >> #f99
+
+[external proxy] as PXY << traefik >> #99f
+[log forwarder] as LF << fluent-bit >> #999
+[log/trace storage] as ES << elasticsearch >> #f9f
+[log visualization] as K << kibana >> #f9f
+[service discovery] as C << consul server >> #ee3
+[trace collector] as T << jaeger-collector >> #3ee
+[trace query] as Tq << jaeger-query >> #3ee
+[metrics collector] as P << prometheus >> #f3f
+[mertics visualization] as G << grafana >> #f3f
+
+actor User as usr #66c
+
+usr ==> PXY #66c
+PXY ==> Ap #66c : 1. external\nrequest
+Ap =l==> Dp #66c : 2. fetch data
+Dp ==> Dc #66c : 3. read data
+Dp =u=> SC #66c : 4. read content
+Ap ===> Rp #66c : 5. render using data
+
+Al ---> LF #999
+Dl ---> LF #999
+Rl ---> LF #999
+
+Ac ---> C #990
+Dc ---> C #990
+Rc ---> C #990
+
+At ---> T #099
+Dt ---> T #099
+Rt ---> T #099
+
+T -u-> ES #099
+Tq -u-> ES #099
+LF --> ES #999
+K -> ES
+
+P ---> Ap #f3f
+P ---> Dp #f3f
+P ---> Rp #f3f
+G -> P #f3f
+
+@enduml

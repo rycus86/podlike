@@ -1,0 +1,452 @@
+version: '3.5'
+services:
+
+  aggregator:
+    image: rycus86/podlike
+    labels:
+      pod.component.app: |
+        image: rycus86/sample-flask-base
+        command: |
+          python -c "
+          import logging
+          import requests
+          from flask import Flask, request
+
+          logging.basicConfig(filename='/var/log/apps/aggregator/app.log', level='INFO')
+
+          app = Flask(__name__)
+
+          @app.route('/')
+          def serve():
+              incoming_headers = {k: v for k, v in request.headers}
+
+              data_response = requests.get('http://localhost/data/fetch', headers=incoming_headers)
+
+              if data_response.status_code != 200:
+                  return 'Oops, no data', 500, {}
+
+              render_response = requests.post('http://localhost/renderer/render',
+                                              json=data_response.json(), headers=incoming_headers)
+
+              if render_response.status_code != 200:
+                  return 'Oops, failed to render', 500, {}
+
+              return render_response.text
+
+          app.run(host='127.0.0.1', port=5000, threaded=True)
+          "
+      pod.component.proxy: |
+        image: traefik
+        command: >
+          --accesslog --accesslog.filepath=/var/log/apps/aggregator/proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/aggregator/proxy.log
+          --consulcatalog --consulcatalog.watch
+          --consulcatalog.constraints='tag==aggregated'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+          --tracing.jaeger --tracing.servicename=aggregator
+      pod.component.tracing: |
+        image: jaegertracing/jaeger-agent
+        environment:
+          COLLECTOR_HOST_PORT: jaeger-collector:14267
+      pod.component.sd: |
+        image: consul
+        command: agent -join=sd-server -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "entry",
+                  "tags": [
+                      "traefik.tags=external",
+                      "traefik.frontend.rule=PathPrefix: /; AddPrefix: /entry"
+                  ],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-aggregator",
+                  "tags": [
+                      "traefik.tags=aggregated",
+                      "traefik.frontend.rule=PathPrefixStrip: /entry"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+      pod.component.logging: |
+        image: fluent/fluent-bit
+        command: >
+          /fluent-bit/bin/fluent-bit
+            -i tail -p 'path=/var/log/apps/aggregator/app.log' -t 'aggregator.app'
+            -i tail -p 'path=/var/log/apps/aggregator/proxy.access.log' -t 'aggregator.proxy.access'
+            -i tail -p 'path=/var/log/apps/aggregator/proxy.log' -t 'aggregator.proxy.out'
+            -o forward -p 'host=logging-server' -m '*' -v
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - logs:/var/log/apps
+
+  data-server:
+    image: rycus86/podlike
+    labels:
+      pod.component.app: |
+        image: rycus86/sample-flask-base
+        command: |
+          python -c "
+          import json
+          import base64
+          import logging
+          import requests
+          from flask import Flask, request, jsonify
+
+          logging.basicConfig(filename='/var/log/apps/data-server/app.log', level='INFO')
+
+          app = Flask(__name__)
+
+          def do_request(url, fail_on_error=True):
+              response = requests.get(url, headers={k: v for k, v in request.headers})
+
+              if response.status_code != 200:
+                  if fail_on_error:
+                      raise Exception('Request failed: %s' % response)
+                  else:
+                      return None
+
+              return response.text
+
+          @app.route('/fetch')
+          def render():
+              static_config = do_request('http://localhost/static-files/config.json')
+              static_styles = do_request('http://localhost/static-files/styles.css')
+
+              kv_data = do_request('http://localhost/kv/data?recurse=true', fail_on_error=False)
+
+              result = dict(json.loads(static_config))
+              result['data'] = {}
+
+              if kv_data:
+                  for item in json.loads(kv_data):
+                      key, value = item.get('Key'), item.get('Value')
+                      if key and value:
+                          key = key.split('/')[-1]
+                          value = base64.b64decode(value)
+
+                          result['data'][key] = value
+
+              result['styles'] = static_styles
+
+              return jsonify(result)
+
+          app.run(host='127.0.0.1', port=5000, threaded=True)
+          "
+      pod.component.proxy: |
+        image: traefik
+        command: >
+          --accesslog --accesslog.filepath=/var/log/apps/data-server/proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/data-server/proxy.log
+          --consulcatalog --consulcatalog.watch
+          --consulcatalog.constraints='tag==data-server'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --tracing.jaeger --tracing.servicename=data-server
+      pod.component.tracing: |
+        image: jaegertracing/jaeger-agent
+        environment:
+          COLLECTOR_HOST_PORT: jaeger-collector:14267
+      pod.component.sd: |
+        image: consul
+        command: agent -join=sd-server -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "data",
+                  "tags": ["traefik.tags=aggregated"],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-data-server",
+                  "tags": [
+                    "traefik.tags=data-server",
+                    "traefik.frontend.rule=PathPrefixStrip: /data"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-consul",
+                  "tags": [
+                    "traefik.tags=data-server",
+                    "traefik.frontend.rule=PathPrefix: /kv; ReplacePathRegex: ^/kv/(.*) /v1/kv/$$1"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 8500,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+      pod.component.logging: |
+        image: fluent/fluent-bit
+        command: >
+          /fluent-bit/bin/fluent-bit
+            -i tail -p 'path=/var/log/apps/data-server/app.log' -t 'data.server.app'
+            -i tail -p 'path=/var/log/apps/data-server/proxy.access.log' -t 'data.server.proxy.access'
+            -i tail -p 'path=/var/log/apps/data-server/proxy.log' -t 'data.server.proxy.out'
+            -o forward -p 'host=logging-server' -m '*' -v
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - logs:/var/log/apps
+
+  renderer:
+    image: rycus86/podlike
+    labels:
+      pod.component.app: |
+        image: rycus86/sample-flask-base
+        command: |
+          python -c '
+          import logging
+          from flask import Flask, request, render_template_string
+
+          logging.basicConfig(filename="/var/log/apps/aggregator/app.log", level="INFO")
+
+          app = Flask(__name__)
+
+          @app.route("/render", methods=["POST"])
+          def render():
+              return render_template_string("""
+              <html><head><style>{{ styles }}</style></head><body>
+              {% for name in names %}
+              <div class="form-item">
+                  <form action="{{ returnPath }}" method="post">
+                      <span><b>{{ name }}</b>: </span>
+                      <input type="text" name="{{ name }}" value="{{ data.get(name, "") }}"/>
+                      <input type="submit" value="Update"/>
+                  </form>
+              <div>
+              {% endfor %}
+              </body></html>
+              """, **request.get_json())
+
+          app.run(host="127.0.0.1", port=5000, threaded=True)
+          '
+      pod.component.proxy: |
+        image: traefik
+        command: >
+          --accesslog --accesslog.filepath=/var/log/apps/aggregator/proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/aggregator/proxy.log
+          --consulcatalog --consulcatalog.watch
+          --consulcatalog.constraints='tag==renderer'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --tracing.jaeger --tracing.servicename=renderer
+      pod.component.tracing: |
+        image: jaegertracing/jaeger-agent
+        environment:
+          COLLECTOR_HOST_PORT: jaeger-collector:14267
+      pod.component.sd: |
+        image: consul
+        command: agent -join=sd-server -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "renderer",
+                  "tags": ["traefik.tags=aggregated"],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "local-renderer",
+                  "tags": [
+                    "traefik.tags=renderer",
+                    "traefik.frontend.rule=PathPrefixStrip: /renderer"
+                  ],
+                  "address": "127.0.0.1",
+                  "port": 5000,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+      pod.component.logging: |
+        image: fluent/fluent-bit
+        command: >
+          /fluent-bit/bin/fluent-bit
+            -i tail -p 'path=/var/log/apps/aggregator/app.log' -t 'renderer.app'
+            -i tail -p 'path=/var/log/apps/aggregator/proxy.access.log' -t 'renderer.proxy.access'
+            -i tail -p 'path=/var/log/apps/aggregator/proxy.log' -t 'renderer.proxy.out'
+            -o forward -p 'host=logging-server' -m '*' -v
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - logs:/var/log/apps
+
+  # web server for static files
+
+  static-files:
+    image: rycus86/podlike
+    command: -logs
+    labels:
+      pod.component.server: |
+        image: nginx
+      pod.copy.server: |
+        /tmp/static-config.json: /usr/share/nginx/html/config.json
+        /tmp/static-styles.css:  /usr/share/nginx/html/styles.css
+      pod.component.sd: |
+        image: consul
+        command: agent -join=sd-server -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "static-files",
+                  "tags": [
+                    "traefik.tags=data-server",
+                    "traefik.frontend.rule=PathPrefixStrip: /static-files"
+                  ],
+                  "port": 80,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep nginx"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+    configs:
+      - source: static-config
+        target: /tmp/static-config.json
+      - source: static-styles
+        target: /tmp/static-styles.css
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # external router
+
+  router:
+    image: traefik
+    command: >
+      --api --api.dashboard --metrics.prometheus
+      --tracing.jaeger --tracing.servicename=router
+      --tracing.jaeger.localagenthostport=jaeger-stack-agent:6831
+      --consulcatalog --consulcatalog.watch
+      --consulcatalog.constraints='tag==external'
+      --consulcatalog.endpoint=sd-server:8500
+      --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+    ports:
+      - 8080:8080
+      - 80:80
+
+  # main service discovery server
+
+  sd-server:
+    image: consul
+    environment:
+      - CONSUL_BIND_INTERFACE=eth2
+    ports:
+      - 8500:8500
+
+  # EFK stack (used for logs and traces)
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.4
+    environment:
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      discovery.type: single-node
+      http.host: 0.0.0.0
+      transport.host: 127.0.0.1
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:6.2.4
+    ports:
+      - 5601:5601
+
+  logging-server:
+    image: fluent/fluent-bit:0.13.0
+    command: >
+      /fluent-bit/bin/fluent-bit
+        -i forward -o stdout
+        -o es -p 'Host=elasticsearch' -p 'Include_Tag_Key=on' -p 'Tag_Key=@log_name'
+        -m '*' -v
+
+  # Jaeger tracing
+
+  jaeger-stack-agent:
+    image: jaegertracing/jaeger-agent
+    environment:
+      COLLECTOR_HOST_PORT: jaeger-collector:14267
+
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://elasticsearch:9200
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://elasticsearch:9200
+    ports:
+      - "16686:16686"
+
+volumes:
+  logs:
+
+configs:
+  static-config:
+    file: ./static-content/config.json
+  static-styles:
+    file: ./static-content/styles.css
