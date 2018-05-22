@@ -1,4 +1,4 @@
-# Service mesh example [WIP]
+# Service mesh example
 
 This stack demonstrates 3 simple Python HTTP server applications, and particularly, the HTTP routing between them. The point to demonstrate here, is that the services themselves don't need to worry about dealing with service discovery or any other means of finding the target applications to send requests to, and can conveniently just talk to their tightly coupled reverse proxies. The applications need to implement the business logic only.
 

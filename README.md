@@ -49,7 +49,7 @@ By sharing a local volume for multiple containers, one could generate configurat
 
 The example on the link below modernizes an application, by providing a composite HTTP health-check endpoint for a Java application, that only exposes liveness on JMX.
 
-*See also the [volume example](https://github.com/rycus86/podlike/tree/master/examples/healthz)*
+*See also the [health-check example](https://github.com/rycus86/podlike/tree/master/examples/healthz)*
 
 6. Service meshes
 
