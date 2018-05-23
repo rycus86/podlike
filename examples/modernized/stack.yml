@@ -12,7 +12,7 @@ services:
           import requests
           from flask import Flask, request
 
-          logging.basicConfig(filename='/var/log/apps/aggregator/app.log', level='INFO')
+          logging.basicConfig(filename='/var/log/apps/aggregator-app.log', level='INFO')
 
           app = Flask(__name__)
 
@@ -38,13 +38,14 @@ services:
       pod.component.proxy: |
         image: traefik
         command: >
-          --accesslog --accesslog.filepath=/var/log/apps/aggregator/proxy.access.log
-          --traefiklog --traefiklog.filepath=/var/log/apps/aggregator/proxy.log
+          --accesslog --accesslog.filepath=/var/log/apps/aggregator-proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/aggregator-proxy.log
           --consulcatalog --consulcatalog.watch
           --consulcatalog.constraints='tag==aggregated'
           --consulcatalog.endpoint=127.0.0.1:8500
           --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
           --tracing.jaeger --tracing.servicename=aggregator
+          --metrics.prometheus
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -87,6 +88,18 @@ services:
                       "status": "passing"
                     }
                   ]
+                },
+                {
+                  "name": "local-aggregator-metrics",
+                  "tags": ["prom.metrics=enabled"],
+                  "port": 8080,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
                 }
               ]
             }
@@ -94,13 +107,13 @@ services:
         image: fluent/fluent-bit
         command: >
           /fluent-bit/bin/fluent-bit
-            -i tail -p 'path=/var/log/apps/aggregator/app.log' -t 'aggregator.app'
-            -i tail -p 'path=/var/log/apps/aggregator/proxy.access.log' -t 'aggregator.proxy.access'
-            -i tail -p 'path=/var/log/apps/aggregator/proxy.log' -t 'aggregator.proxy.out'
+            -i tail -p 'path=/var/log/apps/aggregator-app.log' -t 'aggregator.app'
+            -i tail -p 'path=/var/log/apps/aggregator-proxy.access.log' -t 'aggregator.proxy.access'
+            -i tail -p 'path=/var/log/apps/aggregator-proxy.log' -t 'aggregator.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - logs:/var/log/apps
+      - aggregator_logs:/var/log/apps
 
   data-server:
     image: rycus86/podlike
@@ -115,7 +128,7 @@ services:
           import requests
           from flask import Flask, request, jsonify
 
-          logging.basicConfig(filename='/var/log/apps/data-server/app.log', level='INFO')
+          logging.basicConfig(filename='/var/log/apps/data-server-app.log', level='INFO')
 
           app = Flask(__name__)
 
@@ -158,12 +171,13 @@ services:
       pod.component.proxy: |
         image: traefik
         command: >
-          --accesslog --accesslog.filepath=/var/log/apps/data-server/proxy.access.log
-          --traefiklog --traefiklog.filepath=/var/log/apps/data-server/proxy.log
+          --accesslog --accesslog.filepath=/var/log/apps/data-server-proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/data-server-proxy.log
           --consulcatalog --consulcatalog.watch
           --consulcatalog.constraints='tag==data-server'
           --consulcatalog.endpoint=127.0.0.1:8500
           --tracing.jaeger --tracing.servicename=data-server
+          --metrics.prometheus
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -172,7 +186,7 @@ services:
         image: consul
         command: agent -join=sd-server -enable-script-checks
         environment:
-          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_BIND_INTERFACE: eth2
           CONSUL_LOCAL_CONFIG: |
             {
               "services": [
@@ -205,7 +219,7 @@ services:
                   ]
                 },
                 {
-                  "name": "local-consul",
+                  "name": "kv-consul",
                   "tags": [
                     "traefik.tags=data-server",
                     "traefik.frontend.rule=PathPrefix: /kv; ReplacePathRegex: ^/kv/(.*) /v1/kv/$$1"
@@ -219,6 +233,18 @@ services:
                       "status": "passing"
                     }
                   ]
+                },
+                {
+                  "name": "local-data-server-metrics",
+                  "tags": ["prom.metrics=enabled"],
+                  "port": 8080,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
                 }
               ]
             }
@@ -226,13 +252,15 @@ services:
         image: fluent/fluent-bit
         command: >
           /fluent-bit/bin/fluent-bit
-            -i tail -p 'path=/var/log/apps/data-server/app.log' -t 'data.server.app'
-            -i tail -p 'path=/var/log/apps/data-server/proxy.access.log' -t 'data.server.proxy.access'
-            -i tail -p 'path=/var/log/apps/data-server/proxy.log' -t 'data.server.proxy.out'
+            -i tail -p 'path=/var/log/apps/data-server-app.log' -t 'data.server.app'
+            -i tail -p 'path=/var/log/apps/data-server-proxy.access.log' -t 'data.server.proxy.access'
+            -i tail -p 'path=/var/log/apps/data-server-proxy.log' -t 'data.server.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - logs:/var/log/apps
+      - data_server_logs:/var/log/apps
+    ports:
+      - 8081:8080
 
   renderer:
     image: rycus86/podlike
@@ -244,7 +272,7 @@ services:
           import logging
           from flask import Flask, request, render_template_string
 
-          logging.basicConfig(filename="/var/log/apps/aggregator/app.log", level="INFO")
+          logging.basicConfig(filename="/var/log/apps/renderer-app.log", level="INFO")
 
           app = Flask(__name__)
 
@@ -269,12 +297,13 @@ services:
       pod.component.proxy: |
         image: traefik
         command: >
-          --accesslog --accesslog.filepath=/var/log/apps/aggregator/proxy.access.log
-          --traefiklog --traefiklog.filepath=/var/log/apps/aggregator/proxy.log
+          --accesslog --accesslog.filepath=/var/log/apps/renderer-proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/renderer-proxy.log
           --consulcatalog --consulcatalog.watch
           --consulcatalog.constraints='tag==renderer'
           --consulcatalog.endpoint=127.0.0.1:8500
           --tracing.jaeger --tracing.servicename=renderer
+          --metrics.prometheus
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -314,6 +343,18 @@ services:
                       "status": "passing"
                     }
                   ]
+                },
+                {
+                  "name": "local-renderer-metrics",
+                  "tags": ["prom.metrics=enabled"],
+                  "port": 8080,
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
                 }
               ]
             }
@@ -321,13 +362,13 @@ services:
         image: fluent/fluent-bit
         command: >
           /fluent-bit/bin/fluent-bit
-            -i tail -p 'path=/var/log/apps/aggregator/app.log' -t 'renderer.app'
-            -i tail -p 'path=/var/log/apps/aggregator/proxy.access.log' -t 'renderer.proxy.access'
-            -i tail -p 'path=/var/log/apps/aggregator/proxy.log' -t 'renderer.proxy.out'
+            -i tail -p 'path=/var/log/apps/renderer-app.log' -t 'renderer.app'
+            -i tail -p 'path=/var/log/apps/renderer-proxy.access.log' -t 'renderer.proxy.access'
+            -i tail -p 'path=/var/log/apps/renderer-proxy.log' -t 'renderer.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - logs:/var/log/apps
+      - renderer_logs:/var/log/apps
 
   # web server for static files
 
@@ -412,6 +453,19 @@ services:
     image: docker.elastic.co/kibana/kibana-oss:6.2.4
     ports:
       - 5601:5601
+    healthcheck:
+      # hack: use the healthcheck to auto-create the index pattern in Kibana
+      test: |
+        (curl -fs "http://127.0.0.1:5601/api/saved_objects/?type=index-pattern&per_page=3" | grep -v '"total":0') || \
+        ((curl -fs -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+           "http://127.0.0.1:5601/api/saved_objects/index-pattern/fluent-bit" \
+           -d"{\"attributes\":{\"title\":\"fluent-bit\",\"timeFieldName\":\"@timestamp\"}}") && \
+         (curl -fs -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+            "http://127.0.0.1:5601/api/kibana/settings/defaultIndex" \
+            -d"{\"value\":\"fluent-bit\"}"))
+      interval: 3s
+      timeout: 15s
+      start_period: 1m
 
   logging-server:
     image: fluent/fluent-bit:0.13.0
@@ -440,13 +494,50 @@ services:
       SPAN_STORAGE_TYPE: elasticsearch
       ES_SERVER_URLS: http://elasticsearch:9200
     ports:
-      - "16686:16686"
+      - 16686:16686
+
+  # Prometheus + Grafana for metrics
+
+  prometheus:
+    image: prom/prometheus:v2.2.1
+    configs:
+      - source: prometheus-config
+        target: /etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:5.1.3
+    configs:
+      - source: grafana-config
+        target: /etc/grafana/grafana.ini
+      - source: grafana-datasource
+        target: /etc/grafana/provisioning/datasources/default.yaml
+      - source: grafana-dashboard-config
+        target: /etc/grafana/provisioning/dashboards/default.yaml
+      - source: grafana-dashboard-example
+        target: /var/lib/grafana/dashboards/example.json
+    ports:
+      - 3000:3000
 
 volumes:
-  logs:
+  aggregator_logs:
+    name: 'aggregator_logs_{{.Task.ID}}'
+  data_server_logs:
+    name: 'data_server_logs_{{.Task.ID}}'
+  renderer_logs:
+    name: 'renderer_logs_{{.Task.ID}}'
 
 configs:
   static-config:
     file: ./static-content/config.json
   static-styles:
     file: ./static-content/styles.css
+  prometheus-config:
+    file: ./prometheus/config.yml
+  grafana-config:
+    file: ./grafana/config.ini
+  grafana-datasource:
+    file: ./grafana/datasource.yaml
+  grafana-dashboard-config:
+    file: ./grafana/dashboard.yaml
+  grafana-dashboard-example:
+    file: ./grafana/dashboards/example.json

@@ -40,7 +40,10 @@ frame Renderer {
     Rp .. Rt
 }
 
-[static content] as SC << nginx >> #f99
+frame "Static content" {
+    [web server] as SC << nginx >> #f99
+    [service discovery] as SCc << consul >> #ee3
+}
 
 [external proxy] as PXY << traefik >> #99f
 [log forwarder] as LF << fluent-bit >> #999
@@ -68,6 +71,7 @@ Rl ---> LF #999
 Ac ---> C #990
 Dc ---> C #990
 Rc ---> C #990
+SCc ---> C #990
 
 At ---> T #099
 Dt ---> T #099

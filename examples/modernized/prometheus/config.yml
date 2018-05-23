@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 3s
+
+  external_labels:
+    monitor: 'modernized-stack'
+
+rule_files:
+
+scrape_configs:
+  - job_name: 'prometheus'
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'router'
+
+    dns_sd_configs:
+      - names: ['router']
+        port: 8080
+        type: A
+        refresh_interval: 5s
+
+  - job_name: consul
+
+    consul_sd_configs:
+      - server: 'sd-server:8500'
+
+    relabel_configs:
+      - source_labels: [__meta_consul_tags]
+        regex: .*prom.metrics.*
+        action: keep
+      - source_labels: [__meta_consul_service]
+        target_label: job
+        regex: (local-)?(.+?)(-metrics)?
+        replacement: $2
