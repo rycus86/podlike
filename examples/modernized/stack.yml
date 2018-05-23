@@ -186,7 +186,7 @@ services:
         image: consul
         command: agent -join=sd-server -enable-script-checks
         environment:
-          CONSUL_BIND_INTERFACE: eth2
+          CONSUL_BIND_INTERFACE: eth0
           CONSUL_LOCAL_CONFIG: |
             {
               "services": [
@@ -259,8 +259,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - data_server_logs:/var/log/apps
-    ports:
-      - 8081:8080
 
   renderer:
     image: rycus86/podlike
