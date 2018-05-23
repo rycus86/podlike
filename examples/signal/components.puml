@@ -1,0 +1,18 @@
+@startuml
+
+frame "pod" {
+    [hello] as h << Python >> #aaf
+    [ping] as p << Python >> #afa
+
+    frame "shared volume" {
+        [pid file] as f #aaa
+    }
+}
+
+h --> f : write PID
+h -> h : wait for signal
+
+p <-- f : read PID
+p -> h : send signal
+
+@enduml

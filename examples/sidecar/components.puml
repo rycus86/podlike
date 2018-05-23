@@ -1,0 +1,14 @@
+@startuml
+
+frame "pod" {
+    [app] as app << demo-site >> #aaf
+    [proxy] as pxy << nginx >> #afa
+}
+
+actor User
+
+User -> pxy : Handle external requests
+pxy -> app : Cached requests\n+ serve stale on error
+
+@enduml
+

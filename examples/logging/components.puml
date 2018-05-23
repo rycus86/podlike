@@ -1,0 +1,15 @@
+@startuml
+
+frame "pod" {
+    [logger] as log #aaf
+    [tail] as tail #afa
+
+    frame "shared volume" {
+        [log file] as file #aaa
+    }
+}
+
+log --> file : write
+tail <-- file : read
+
+@enduml

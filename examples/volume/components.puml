@@ -1,0 +1,28 @@
+@startuml
+
+frame "pod" {
+    [webserver] as ws << Nginx >> #faa
+    [reloader] as re << Python >> #afa
+
+    frame "volume" as v1 {
+        [pid file] as pf #aaa
+    }
+
+    frame "volume" as v2 {
+        [config file] as cf #aaa
+    }
+}
+
+actor User as usr
+actor Admin as admin
+
+usr --> ws : HTTP request
+ws <-- cf : Read configuration
+ws --> pf : Write PID
+
+admin --> re : 1. Send reload request
+re --> cf : 2. Write new configuration
+re <-- pf : 3. Read PID
+re -> ws : 4. Send signal to reload
+
+@enduml

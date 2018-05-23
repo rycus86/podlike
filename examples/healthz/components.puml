@@ -1,0 +1,24 @@
+@startuml
+
+frame "pod" {
+    [app] as app << Java + JMX >> #afa
+    [exporter] as exp << JMX exporter >> #faa
+    [goss] as goss << Healthz >> #aaf
+
+    frame "volume" {
+        [report file] as rf #aaa
+    }
+}
+
+[Monitoring] as mon #ffa
+
+app --> rf : Append to file\nperiodically
+exp -> app : Read state\n[ JMX ]
+
+goss -> app : Check process is running
+goss -> exp : Check metrics\n[ HTTP ]
+goss -> rf  : Check report file exists\nand is modified recently
+
+mon -> goss : GET /healthz\n[ HTTP ]
+
+@enduml
