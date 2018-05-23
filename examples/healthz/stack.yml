@@ -28,3 +28,4 @@ services:
 
 volumes:
   shared:
+    name: 'shared_{{.Task.ID}}'

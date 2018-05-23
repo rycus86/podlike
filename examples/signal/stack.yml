@@ -56,4 +56,4 @@ services:
 
 volumes:
   pids:
-
+    name: 'pids_{{.Task.ID}}'

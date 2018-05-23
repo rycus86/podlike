@@ -56,3 +56,4 @@ services:
 
 volumes:
   logs:
+    name: 'app_logs_{{.Task.ID}}'
