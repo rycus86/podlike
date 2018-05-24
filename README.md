@@ -55,7 +55,7 @@ The example on the link below modernizes an application, by providing a composit
 
 Applications should implement business logic. With service meshes, we can externalize service discovery, routing, tracing concerns, and much more.
 
-*See also the [service mesh example](https://github.com/rycus86/podlike/tree/master/examples/service-mesh)*
+*See also the [service mesh](https://github.com/rycus86/podlike/tree/master/examples/service-mesh) and the [modernized stack](https://github.com/rycus86/podlike/tree/master/examples/modernized) examples*
 
 ## Configuration
 

@@ -10,7 +10,7 @@ services:
           python -c "
           import logging
           import requests
-          from flask import Flask, request
+          from flask import Flask, request, redirect
 
           logging.basicConfig(filename='/var/log/apps/aggregator-app.log', level='INFO')
 
@@ -32,6 +32,18 @@ services:
                   return 'Oops, failed to render', 500, {}
 
               return render_response.text
+
+          @app.route('/update', methods=['POST'])
+          def update():
+              incoming_headers = {k: v for k, v in request.headers}
+
+              data_response = requests.post('http://localhost/data/set',
+                                            data=request.form, headers=incoming_headers)
+
+              if data_response.status_code != 200:
+                  return 'Oops, update failed', 500, {}
+
+              return redirect(data_response.json().get('returnPath'))
 
           app.run(host='127.0.0.1', port=5000, threaded=True)
           "
@@ -132,8 +144,12 @@ services:
 
           app = Flask(__name__)
 
-          def do_request(url, fail_on_error=True):
-              response = requests.get(url, headers={k: v for k, v in request.headers})
+          def do_request(url, method='get', data=None, fail_on_error=True):
+              headers = {k: v for k, v in request.headers
+                         if k.lower() not in ('content-type', 'content-length')}
+                         # make sure the `Content-Type` and `Content-Length` headers are set by requests
+
+              response = requests.request(method, url, data=data, headers=headers)
 
               if response.status_code != 200:
                   if fail_on_error:
@@ -165,6 +181,15 @@ services:
               result['styles'] = static_styles
 
               return jsonify(result)
+
+          @app.route('/set', methods=['POST'])
+          def set_parameter():
+              for name, value in request.form.items():
+                  do_request('http://localhost/kv/data/%s' % name, method='put', data=value)
+
+              static_config = do_request('http://localhost/static-files/config.json')
+
+              return jsonify(returnPath=json.loads(static_config).get('returnPath'))
 
           app.run(host='127.0.0.1', port=5000, threaded=True)
           "
@@ -278,9 +303,10 @@ services:
           def render():
               return render_template_string("""
               <html><head><style>{{ styles }}</style></head><body>
+              <h2>Example form</h2>
               {% for name in names %}
               <div class="form-item">
-                  <form action="{{ returnPath }}" method="post">
+                  <form action="{{ updatePath }}" method="post">
                       <span><b>{{ name }}</b>: </span>
                       <input type="text" name="{{ name }}" value="{{ data.get(name, "") }}"/>
                       <input type="submit" value="Update"/>

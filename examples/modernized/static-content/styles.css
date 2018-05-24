@@ -1,3 +1,7 @@
+.form-item span {
+    display: inline-block;
+    width: 80px;
+}
 .form-item span b {
     text-transform: capitalize;
 }

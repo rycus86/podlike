@@ -1,7 +1,5 @@
 @startuml
 
-title DYI HTTP service mesh on Swarm
-
 frame calc << podlike >> #c9ffc9 {
   [app] << Python >> as calc_app #ff9090
   [router] << Traefik >> as calc_router #9090ff

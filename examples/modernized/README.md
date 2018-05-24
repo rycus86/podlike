@@ -20,10 +20,10 @@ $ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/m
 
 Each of the applications is coupled with:
 
-- A *Traefik* `proxy` for accepting incoming connections to the app, and to forward requests to other services from the app
-- A *Consul* agent for service discovery, and to act as a [Key-Value store](TODO) for the `data-server`
-- An *OpenTracing* compatible [Jaeger](TODO) agent for HTTP request tracing
-- A [Fluentbit](TODO) agent to pick up logs from files on a shared volume and forward them to the central log aggregator *(see below the diagram)*
+- A [Traefik](https://traefik.io/) `proxy` for accepting incoming connections to the app, and to forward requests to other services from the app
+- A [Consul](https://www.consul.io/) agent for service discovery, and to act as a [Key-Value store](https://www.consul.io/intro/getting-started/kv.html) for the `data-server`
+- An *OpenTracing* compatible [Jaeger](https://www.jaegertracing.io/) agent for HTTP request tracing
+- A [Fluent Bit](https://fluentbit.io/) agent to pick up logs from files on a shared volume and forward them to the central log aggregator *(see below the diagram)*
 
 ![Components](components.png)
 
@@ -31,13 +31,13 @@ The stack also includes quite a few other services to make it *modern*:
 
 - A frontend *Traefik* `router` as the main HTTP entrypoint to the cluster
 - A central *Consul* server the local agents can connect to
-- [Prometheus](TODO) with [Grafana](TODO) for scraping and displaying metrics
-- [Elasticsearch](TODO) with [Kibana](TODO) for storing and visualizing the logs
-- A central [Fluentbit](TODO link + spelling) to forward logs from the local agents to *Elasticsearch*
+- [Prometheus](https://prometheus.io/) with [Grafana](https://grafana.com/) for scraping and displaying metrics
+- [Elasticsearch](https://www.elastic.co/products/elasticsearch) with [Kibana](https://www.elastic.co/products/kibana) for storing and visualizing the logs
+- A central *Fluent Bit* to forward logs from the local agents to *Elasticsearch*
 - A *Jaeger* collector and UI for distributed traces, also stored in *Elasticsearch*
 - An extra *Jaeger* agent in the stack for the frontend `router` to report to
 - An *Nginx* instance that serves the static bits for `data-server`
 - One more local *Consul* agent running in the same network namespace as *Nginx* for service discovery
 
-You can find the main application accessible on port `80`, the *Traefik* dashboard on `8080`, and you can have a look at the current state of services and the service discovery metadata on the *Consul* UI on port `8500`. You'll find *Kibana* on port `5601` to see the logs from the apps and their reverse proxies, the distributed traces on port `16686` on the *Jaeger* UI, and the metrics on port `3000` in *Grafana*. Everything should be preconfigured for this demo and ready to use, including an example *Grafana* dashboard, its datasource, and the default index pattern in *Kibana*. To have some metrics to look at, hit up `http://127.0.0.1/` a few times, or put some load on it with something like [wrk](TODO).
+You can find the main application accessible on port `80`, the *Traefik* dashboard on `8080`, and you can have a look at the current state of services and the service discovery metadata on the *Consul* UI on port `8500`. You'll find *Kibana* on port `5601` to see the logs from the apps and their reverse proxies, the distributed traces on port `16686` on the *Jaeger* UI, and the metrics on port `3000` in *Grafana*. Everything should be preconfigured for this demo and ready to use, including an example *Grafana* dashboard, its datasource, and the default index pattern in *Kibana*. To have some metrics to look at, hit up `http://127.0.0.1/` a few times, or put some load on it with something like [wrk](https://github.com/wg/wrk).
 

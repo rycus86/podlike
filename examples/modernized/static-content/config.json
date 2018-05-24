@@ -1,4 +1,5 @@
 {
   "names": ["country", "city", "postcode", "address"],
+  "updatePath": "/update",
   "returnPath": "/"
 }
