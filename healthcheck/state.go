@@ -15,7 +15,10 @@ var (
 		StateHealthy:   "healthy",
 	}
 
-	currentStates = map[string]int{}
+	startedContainers = map[string]string{}
+	currentStates     = map[string]int{}
+
+	stateChangeChannel = make(chan string, 1024)
 )
 
 func getCurrentState() int {
@@ -44,8 +47,16 @@ func NameToValue(state string) int {
 	return StateUnknown
 }
 
+func MarkStarted(id, name string) {
+	startedContainers[name] = id
+
+	stateChangeChannel <- id
+}
+
 func Initialize(component string, state int) {
 	currentStates[component] = state
+
+	stateChangeChannel <- component
 }
 
 func GetState() string {
@@ -56,5 +67,30 @@ func SetState(component string, state int) {
 	// only initialized components can set their state
 	if _, ok := currentStates[component]; ok {
 		currentStates[component] = state
+
+		stateChangeChannel <- component
+	}
+}
+
+func WaitUntilReady(componentName string, needsHealthyState bool) {
+	for {
+		if componentId, ok := startedContainers[componentName]; ok {
+
+			if !needsHealthyState {
+				return
+			}
+
+			state, hasHealthCheck := currentStates[componentId]
+			if !hasHealthCheck || state == StateHealthy {
+				return
+			} else {
+				// wait until healthy
+				<-stateChangeChannel
+			}
+
+		} else {
+			// wait until started
+			<-stateChangeChannel
+		}
 	}
 }

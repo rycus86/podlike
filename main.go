@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rycus86/podlike/config"
 	"github.com/rycus86/podlike/engine"
 	"github.com/rycus86/podlike/healthcheck"
@@ -11,30 +12,45 @@ import (
 	"syscall"
 )
 
+var (
+	shouldExit bool
+)
+
 func run(components []*engine.Component) {
 	var (
 		exitChan      = make(chan engine.ComponentExited, len(components))
 		signalChan    = make(chan os.Signal, 1)
 		configuration = config.Parse()
+
+		wg sync.WaitGroup
 	)
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	wg.Add(len(components))
 
 	for _, component := range components {
 		current := component
 
 		go func() {
-			err := current.Start(configuration)
-			if err != nil {
-				fmt.Println("Failed to start", current.Name, ":", err)
+			err := handleStart(current, configuration)
 
-				done(components)
+			wg.Done()
+
+			if err != nil {
+				exitChan <- engine.ComponentExited{
+					Component: current,
+					Error:     err,
+				}
+
 				return
 			}
 
 			current.WaitFor(exitChan)
 		}()
 	}
+
+	wg.Wait()
 
 	for {
 		select {
@@ -59,7 +75,33 @@ func run(components []*engine.Component) {
 	}
 }
 
+func handleStart(current *engine.Component, configuration *config.Configuration) error {
+	dependencies, err := current.GetDependencies()
+	if err != nil {
+		return errors.New(fmt.Sprintf(
+			"Failed to get the dependencies for %s: %s", current.Name, err))
+	}
+
+	for _, dependency := range dependencies {
+		healthcheck.WaitUntilReady(dependency.Name, dependency.NeedsHealthyState)
+	}
+
+	err = current.Start(configuration)
+	if err != nil {
+		return errors.New(fmt.Sprintf(
+			"Failed to start %s: %s", current.Name, err))
+	}
+
+	if shouldExit {
+		go current.Stop()
+	}
+
+	return nil
+}
+
 func done(components []*engine.Component) {
+	shouldExit = true
+
 	var wg sync.WaitGroup
 
 	wg.Add(len(components))

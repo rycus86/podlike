@@ -150,7 +150,8 @@ Some of the open tasks are:
 - [ ] Support for additional volumes - does it work with `volumes-from` ?
 - [ ] Consider adding a `pause` container
 - [ ] Consider using a proper `init` process
-- [ ] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
+- [x] Handle `depends_on` links
+- [x] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
 - [x] Support for most settings for the components *based on Composefile keys*
 - [x] CPU limits and reservation
 - [x] List the unsupported keys, and gate on having this list up to date in the README
@@ -166,7 +167,6 @@ Some of the open tasks are:
 - `build`: Only pre-built images are supported
 - `cgroup_parent`: This is set by the controller
 - `container_name`: This is set by the controller
-- `depends_on`: Compose-style dependency is not supported
 - `dns`: DNS management is handled by the controller
 - `dns_opt`: DNS management is handled by the controller
 - `dns_search`: DNS management is handled by the controller

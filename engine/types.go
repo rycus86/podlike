@@ -78,6 +78,8 @@ type Component struct {
 
 	Logging *LoggingConfig
 
+	DependsOn interface{} `yaml:"depends_on"`
+
 	// the parent client to the engine
 	client *Client `yaml:"-"`
 
@@ -123,4 +125,10 @@ type ComponentExited struct {
 type CopyConfig struct {
 	Source string
 	Target string
+}
+
+type Dependency struct {
+	Name string
+
+	NeedsHealthyState bool
 }

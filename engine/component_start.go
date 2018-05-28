@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/rycus86/podlike/config"
+	"github.com/rycus86/podlike/healthcheck"
 	"time"
 )
 
@@ -31,6 +32,8 @@ func (c *Component) Start(configuration *config.Configuration) error {
 	if err := c.startContainer(); err != nil {
 		return err
 	}
+
+	healthcheck.MarkStarted(c.container.ID, c.Name)
 
 	if configuration.StreamLogs {
 		go c.streamLogs()
