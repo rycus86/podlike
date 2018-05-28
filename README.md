@@ -57,6 +57,8 @@ Applications should implement business logic. With service meshes, we can extern
 
 *See also the [service mesh](https://github.com/rycus86/podlike/tree/master/examples/service-mesh) and the [modernized stack](https://github.com/rycus86/podlike/tree/master/examples/modernized) examples*
 
+> See a more detailed explanation of the examples at [https://blog.viktoradam.net/2018/05/24/podlike-example-use-cases/](https://blog.viktoradam.net/2018/05/24/podlike-example-use-cases/)
+
 ## Configuration
 
 The controller needs to run inside a Docker containers, and it needs access to the Docker engine through the API (either UNIX socket, TCP, etc.). The list of components comes from __container__ labels (not service labels). These labels need to start with `pod.component.`
