@@ -21,17 +21,17 @@ func run(components []*engine.Component) {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	for _, component := range components {
-		err := component.Start(configuration)
-		if err != nil {
-			fmt.Println("Failed to start", component.Name, ":", err)
-
-			done(components)
-			return
-		}
-
 		current := component
 
 		go func() {
+			err := current.Start(configuration)
+			if err != nil {
+				fmt.Println("Failed to start", current.Name, ":", err)
+
+				done(components)
+				return
+			}
+
 			current.WaitFor(exitChan)
 		}()
 	}
