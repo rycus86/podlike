@@ -1,5 +1,9 @@
 package healthcheck
 
+import (
+	"time"
+)
+
 const (
 	StateUnknown   = iota
 	StateStarting  = iota
@@ -18,7 +22,7 @@ var (
 	startedContainers = map[string]string{}
 	currentStates     = map[string]int{}
 
-	stateChangeChannel = make(chan string, 1024)
+	startWaitInterval = 300 * time.Millisecond
 )
 
 func getCurrentState() int {
@@ -49,14 +53,10 @@ func NameToValue(state string) int {
 
 func MarkStarted(id, name string) {
 	startedContainers[name] = id
-
-	stateChangeChannel <- id
 }
 
 func Initialize(component string, state int) {
 	currentStates[component] = state
-
-	stateChangeChannel <- component
 }
 
 func GetState() string {
@@ -67,8 +67,6 @@ func SetState(component string, state int) {
 	// only initialized components can set their state
 	if _, ok := currentStates[component]; ok {
 		currentStates[component] = state
-
-		stateChangeChannel <- component
 	}
 }
 
@@ -85,12 +83,12 @@ func WaitUntilReady(componentName string, needsHealthyState bool) {
 				return
 			} else {
 				// wait until healthy
-				<-stateChangeChannel
+				time.Sleep(startWaitInterval)
 			}
 
 		} else {
 			// wait until started
-			<-stateChangeChannel
+			time.Sleep(startWaitInterval)
 		}
 	}
 }
