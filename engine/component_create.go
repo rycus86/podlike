@@ -224,6 +224,15 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		hostConfig.Tmpfs = tmpfs
 	}
 
+	if c.Volumes != nil {
+		mounts, err := c.getMounts()
+		if err != nil {
+			return nil, err
+		}
+
+		hostConfig.Mounts = mounts
+	}
+
 	if c.ShmSize != nil {
 		size, err := units.RAMInBytes(*c.ShmSize)
 		if err != nil {

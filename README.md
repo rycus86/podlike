@@ -188,7 +188,6 @@ Some of the open tasks are:
 - `restart`: Restart modes are not supported
 - `scale`: Scale by increasing the number of Swarm service replicas
 - `volume_driver`: *Currently* managed by the controller, using `volumes_from`
-- `volumes`: *Currently* set by the controller, using `volumes_from`
 - `volumes_from`: *Currently* set by the controller
 
 Any other properties from the [v2 Compose file](https://docs.docker.com/compose/compose-file/compose-file-v2/) should be supported, and working as expected.

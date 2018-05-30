@@ -36,6 +36,8 @@ type Component struct {
 	Runtime         string
 	Tmpfs           interface{}
 
+	Volumes []interface{}
+
 	Healthcheck *Healthcheck
 
 	OomScoreAdj    *int  `yaml:"oom_score_adj"`
@@ -109,6 +111,26 @@ type BlkioConfig struct {
 type LoggingConfig struct {
 	Driver  string
 	Options map[string]string
+}
+
+type Volume struct {
+	Type     string
+	Source   string
+	Target   string
+	ReadOnly bool `mapstructure:"read_only"`
+	Mode     string
+
+	Bind struct {
+		Propagation string
+	}
+
+	Volume struct {
+		NoCopy bool `mapstructure:"nocopy"`
+	}
+
+	Tmpfs struct {
+		Size string
+	}
 }
 
 type ComposeProject struct {

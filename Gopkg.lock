@@ -69,6 +69,12 @@
   version = "v1.0.3"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
+
+[[projects]]
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
   revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
@@ -115,6 +121,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "11c93a7b6edc36f3bea7f132b53aade5f539ec779ee371d341d6e788fdccede1"
+  inputs-digest = "e0a9808341c9ecf7c27fbd2fc76d3575c597a032b04f26efee68d224cb81856a"
   solver-name = "gps-cdcl"
   solver-version = 1
