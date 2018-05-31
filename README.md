@@ -122,6 +122,25 @@ The properties of each component are the same ones a Compose project would accep
 
 To make this more convenient, you can specify a Compose file to configure the components from, using the `pod.compose.file` label, which needs to point to a file inside the controller container. This will ignore any properties the app doesn't support, like ports, networking configuration, etc. (see below). This means, if you have a working Compose project, you're likely to be able to use it to feed the app, even without dropping the unsupported properties. You may still want to change things to work better as a group though.
 
+## Volumes
+
+To share the controller's volumes with the components, the ones Swarm attached to the task, you have two options:
+
+1. Define the volume on the component as well with the same name
+2. Share all of the controllers volumes with all the components *(less secure)*
+
+__Note:__ Option 2 will likely include the Docker engine socket as well, so the components will be able to use it any way they want!
+
+> On versions `0.0.x` and `0.1.x` volume sharing was __on by default__, starting from `0.2.0` it is __off__. If you use `latest` and need the controller's volumes attached to the components, either define the volumes for the components that need it, or enable volume sharing with the `-volumes=true` command line flag.
+
+The controller should be able to attach the requested volumes (for option 1 above) automatically, as long as you use the same name. There is a corner case for both Swarm and Compose though: if the volume has been given an [explicit name](TODO), the container information will only see that, you'll probably still want to use it's reference, as shown on this example below:
+
+```yaml
+TODO example
+```
+
+> TODO describe label
+
 ## Dragons!
 
 This project is very much work in progress (see below). Even with all the tasks done, this will never enable full first-class support for pods on Docker Swarm the way Kubernetes does. Still, it might be useful for small projects or specific deployments.
@@ -129,8 +148,6 @@ This project is very much work in progress (see below). Even with all the tasks 
 I'm not yet sure how the components' containers will interfere with Swarm scheduling, resource allocation, etc. Memory limits are honored, but the components are limited to the controller's limits at most. Memory reservation is allowed on the components if you really want to, but comes with a warning. If you set the reservation on the controller, the cgroup should take note of this for you for all the containers.
 
 I also haven't done extensive testing on other resource constraints, in terms of how they behave when running as part of a shared cgroup. For example, CPU and I/O (`blkio`) limits, ulimits, etc. Not sure yet how these settings would affect things overall, and the app doesn't necessarily try to validate them for you, so at this point, you'll have to try and see for yourself. *But do let me know how it goes, please!*
-
-The current implementation also needs the Docker API connection, usually the engine's UNIX socket as a volume, which will be available to each of the components as well, unless volume sharing is disabled with `-volumes=false`.
 
 Some Swarm features are also *hacked around*, for example configs and secrets can be available to the controller container, but I haven't found easy way to share those with the component containers. These configuration can be copied at component startup, by adding a `pod.copy.<name>=/source/file/in/controller:/dest/file/in/component` label on the controller *(see examples on how to define this in YAML [here](https://github.com/rycus86/podlike/blob/master/engine/component_copy_test.go))*. It does mean, that on every startup or restart, these will be copied again, just be aware. Swarm service labels are also not available on container, and the controller doesn't assume it's running on a Swarm manager node, so we need to use container labels here, which is a bit of a shame.
 
@@ -146,10 +163,10 @@ Some of the open tasks are:
 - [ ] The stop grace period is not visible on containers, only on services
 - [ ] Swarm service labels are not visible on containers, only on services
 - [ ] Extra labels on the components
-- [ ] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
-- [ ] Support for additional volumes - does it work with `volumes-from` ?
 - [ ] Consider adding a `pause` container
 - [ ] Consider using a proper `init` process
+- [x] With volume sharing enabled, the Docker socket will be visible to all components, when visible to the controller
+- [x] Support for additional volumes - does it work with `volumes-from` ?
 - [x] Handle `depends_on` links
 - [x] Example implementations for [composite containers patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns)
 - [x] Support for most settings for the components *based on Composefile keys*
@@ -205,7 +222,7 @@ Usage of /podlike:
   -pull
     	Always pull the images for the components when starting
   -volumes
-    	Enable (default) or disable volume sharing (default true)
+    	Enable volume sharing from the controller
 ```
 
 Alternatively, the `healthcheck` argument starts a one-off run that returns the current health status of the app running in the same container. Check the [Dockerfile](Dockerfile) and the [healthcheck/client.go](https://github.com/rycus86/podlike/blob/master/healthcheck/client.go) source code to see how this works.
