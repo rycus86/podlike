@@ -4,9 +4,11 @@ services:
   pod:
     image: rycus86/podlike
     command: -logs -pids=true -volumes=true
-    # both -pids and -volumes are on by default, so could be omitted
-    # PID sharing can be disabled with -pids=false if ever needed
-    # similarly, volume sharing can be disabled with -volumes=false
+    # PID sharing is on by default, so could be omitted,
+    # and it can be disabled with -pids=false if ever needed.
+    # There are more secure ways for volume sharing though,
+    # see the other examples or the volumes section in the project README.
+    # Here we just share everything - *including* the Docker API socket.
     labels:
       pod.component.webserver: |
         image: nginx:1.13.10

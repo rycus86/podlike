@@ -4,8 +4,10 @@ services:
   pod:
     image: rycus86/podlike
     command: -logs -volumes=true
-    # -volumes is on by default, so could be omitted
-    # to disable volume sharing, use -volumes=false
+    # We just enable volume sharing from the controller
+    # to the components with -volumes=true.
+    # There are more secure ways though, see the other examples
+    # or the volumes section in the project README.
     labels:
       pod.component.logger: |
         image: python:2.7-alpine

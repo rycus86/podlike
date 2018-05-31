@@ -28,6 +28,8 @@ services:
           while True:
               time.sleep(60)  # just wait here
           "
+        volumes:
+          - pids:/var/pids
       pod.component.ping: |
         image: python:2.7-alpine
         environment:
@@ -50,6 +52,8 @@ services:
               print 'Ping!'
               os.kill(pid, signal.SIGHUP)
           "
+        volumes:
+          - pids:/var/pids
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - pids:/var/pids
@@ -57,3 +61,5 @@ services:
 volumes:
   pids:
     name: 'pids_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: pids

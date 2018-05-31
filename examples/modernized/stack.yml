@@ -47,6 +47,8 @@ services:
 
           app.run(host='127.0.0.1', port=5000, threaded=True)
           "
+        volumes:
+          - aggregator_logs:/var/log/apps
       pod.component.proxy: |
         image: traefik
         command: >
@@ -58,6 +60,8 @@ services:
           --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
           --tracing.jaeger --tracing.servicename=aggregator
           --metrics.prometheus
+        volumes:
+          - aggregator_logs:/var/log/apps
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -123,6 +127,8 @@ services:
             -i tail -p 'path=/var/log/apps/aggregator-proxy.access.log' -t 'aggregator.proxy.access'
             -i tail -p 'path=/var/log/apps/aggregator-proxy.log' -t 'aggregator.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
+        volumes:
+          - aggregator_logs:/var/log/apps
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - aggregator_logs:/var/log/apps
@@ -193,6 +199,8 @@ services:
 
           app.run(host='127.0.0.1', port=5000, threaded=True)
           "
+        volumes:
+          - data_server_logs:/var/log/apps
       pod.component.proxy: |
         image: traefik
         command: >
@@ -203,6 +211,8 @@ services:
           --consulcatalog.endpoint=127.0.0.1:8500
           --tracing.jaeger --tracing.servicename=data-server
           --metrics.prometheus
+        volumes:
+          - data_server_logs:/var/log/apps
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -281,6 +291,8 @@ services:
             -i tail -p 'path=/var/log/apps/data-server-proxy.access.log' -t 'data.server.proxy.access'
             -i tail -p 'path=/var/log/apps/data-server-proxy.log' -t 'data.server.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
+        volumes:
+          - data_server_logs:/var/log/apps
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - data_server_logs:/var/log/apps
@@ -318,6 +330,8 @@ services:
 
           app.run(host="127.0.0.1", port=5000, threaded=True)
           '
+        volumes:
+          - renderer_logs:/var/log/apps
       pod.component.proxy: |
         image: traefik
         command: >
@@ -328,6 +342,8 @@ services:
           --consulcatalog.endpoint=127.0.0.1:8500
           --tracing.jaeger --tracing.servicename=renderer
           --metrics.prometheus
+        volumes:
+          - renderer_logs:/var/log/apps
       pod.component.tracing: |
         image: jaegertracing/jaeger-agent
         environment:
@@ -390,6 +406,8 @@ services:
             -i tail -p 'path=/var/log/apps/renderer-proxy.access.log' -t 'renderer.proxy.access'
             -i tail -p 'path=/var/log/apps/renderer-proxy.log' -t 'renderer.proxy.out'
             -o forward -p 'host=logging-server' -m '*' -v
+        volumes:
+          - renderer_logs:/var/log/apps
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - renderer_logs:/var/log/apps
@@ -545,10 +563,16 @@ services:
 volumes:
   aggregator_logs:
     name: 'aggregator_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: aggregator_logs
   data_server_logs:
     name: 'data_server_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: data_server_logs
   renderer_logs:
     name: 'renderer_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: renderer_logs
 
 configs:
   static-config:

@@ -11,7 +11,9 @@ services:
       pod.component.app: |
         image: rycus86/sample-jmx-app
         environment:
-          - OUTPUT_TARGET=/var/shared/progress.txt
+          - OUTPUT_TARGET=/var/output/progress.txt
+        volumes:
+          - data:/var/output
       # JMX to HTTP exporter
       pod.component.exporter: |
         image: rycus86/sample-jmx-exporter
@@ -19,13 +21,19 @@ services:
       # aggregated healthcheck endpoint
       pod.component.goss: |
         image: rycus86/sample-jmx-healthz
+        volumes:
+          - data:/var/shared
     # publish the healthcheck endpoint
     ports:
       - 8080:8080
     volumes:
-      - shared:/var/shared
+      # the target of the volume below doesn't matter in the controller,
+      # we just need it to know about it, to map its name correctly
+      - shared:/unused
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   shared:
     name: 'shared_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: data
