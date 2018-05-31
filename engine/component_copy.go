@@ -17,7 +17,7 @@ import (
 
 func (c *Component) copyFilesIfNecessary() error {
 	for key, value := range c.client.container.Config.Labels {
-		if strings.Index(key, "pod.copy.") >= 0 {
+		if strings.HasPrefix(key, "pod.copy.") {
 			if target := strings.TrimPrefix(key, "pod.copy."); target != c.Name {
 				continue
 			}

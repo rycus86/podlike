@@ -133,13 +133,43 @@ __Note:__ Option 2 will likely include the Docker engine socket as well, so the 
 
 > On versions `0.0.x` and `0.1.x` volume sharing was __on by default__, starting from `0.2.0` it is __off__. If you use `latest` and need the controller's volumes attached to the components, either define the volumes for the components that need it, or enable volume sharing with the `-volumes=true` command line flag.
 
-The controller should be able to attach the requested volumes (for option 1 above) automatically, as long as you use the same name. There is a corner case for both Swarm and Compose though: if the volume has been given an [explicit name](TODO), the container information will only see that, you'll probably still want to use it's reference, as shown on this example below:
+The controller should be able to attach the requested volumes (for option 1 above) automatically, as long as you use the same name. There is a corner case for both Swarm and Compose though: if the volume has been given an [explicit name](https://docs.docker.com/compose/compose-file/compose-file-v2/#name), the container information will only see that, you'll probably still want to use it's reference, as shown on this example below:
 
 ```yaml
-TODO example
+version: '3.5'
+services:
+
+  pod:
+    image: rycus86/podlike
+    command: -logs # -volumes=false is optional and the default
+    labels:
+      pod.component.logger: |
+        image: alpine
+        command: tail -F /var/shared/log.out
+        volumes:
+          - swarm-volume:/var/shared
+      pod.component.writer: |
+        image: alpine
+        command: >
+          sh -c 'while [ true ]; do
+          sleep 1 && echo "tick" >> /data/logs/log.out ;
+          done'
+        volumes:
+          - swarm-volume:/data/logs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - swarm-volume:/unused
+
+volumes:
+  swarm-volume:
+    name: example-vol
+    labels:
+      com.github.rycus86.podlike.volume-ref: swarm-volume
 ```
 
-> TODO describe label
+The *reference* to use here is `swarm-volume` in this case, and is consistently used for the service definition and for the component definitions as well. Docker will actually store this image as `example-vol`, so we need to tell the controller how to find it. This is what the `com.github.rycus86.podlike.volume-ref` volume label is for. As a side-note, you can choose to use a different `volume-ref` for the components and use the original reference for the service, if you're not into consistency much.
+
+Also note, that you don't *have to* share the volume with the controller necessarily. If you just use the same volume name on the components, Docker will just create one, and each of them will be able to use it. If you want it managed by Swarm though, maybe to be able to use templates, like `name: 'volume-{{.Task.ID}}'`, then you also need to attach it to the controller, and set up the reference label for it.
 
 ## Dragons!
 

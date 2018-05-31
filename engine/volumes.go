@@ -11,7 +11,7 @@ func (v *Volume) getMountType() mount.Type {
 		return mount.Type(v.Type)
 	}
 
-	if strings.Index(v.Source, "/") == 0 {
+	if strings.HasPrefix(v.Source, "/") {
 		return mount.TypeBind
 	}
 
@@ -19,5 +19,15 @@ func (v *Volume) getMountType() mount.Type {
 }
 
 func (v *Volume) isReadOnly() bool {
-	return v.ReadOnly || v.Mode == "ro" // TODO other modes?
+	if v.ReadOnly {
+		return true
+	}
+
+	for _, mode := range strings.Split(v.Mode, ",") {
+		if mode == "ro" {
+			return true
+		}
+	}
+
+	return false
 }

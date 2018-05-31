@@ -16,7 +16,7 @@ func (c *Client) GetComponents() ([]*Component, error) {
 	var components []*Component
 
 	for key, value := range c.container.Config.Labels {
-		if strings.Index(key, "pod.component.") >= 0 {
+		if strings.HasPrefix(key, "pod.component.") {
 			var component Component
 
 			err := yaml.UnmarshalStrict([]byte(value), &component)
