@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 var (
@@ -37,6 +38,11 @@ func Parse() *Configuration {
 			return &Configuration{
 				IsHealthcheck: true,
 			}
+		} else if flag.Arg(0) == "version" {
+			version := parseVersion()
+
+			fmt.Println(version.StringForCommandLine())
+			os.Exit(0)
 		} else {
 			panic(fmt.Sprintf("Invalid command line argument: %s", flag.Arg(0)))
 		}

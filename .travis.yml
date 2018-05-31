@@ -28,10 +28,13 @@ jobs:
       script:
         # build
         - >
-          docker build -t podlike:$DOCKER_TAG -f Dockerfile \
-            --build-arg CC=$CC \
-            --build-arg CC_PKG=$CC_PKG \
-            --build-arg CC_GOARCH=$CC_GOARCH \
+          docker build -t podlike:$DOCKER_TAG         \
+            --build-arg CC=$CC                        \
+            --build-arg CC_PKG=$CC_PKG                \
+            --build-arg CC_GOARCH=$CC_GOARCH          \
+            --build-arg VERSION=$TRAVIS_BRANCH        \
+            --build-arg GIT_COMMIT=$TRAVIS_COMMIT     \
+            --build-arg BUILD_TIMESTAMP=$(date +%s)   \
             .
       after_success:
         - |

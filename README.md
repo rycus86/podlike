@@ -257,6 +257,8 @@ Usage of /podlike:
 
 Alternatively, the `healthcheck` argument starts a one-off run that returns the current health status of the app running in the same container. Check the [Dockerfile](Dockerfile) and the [healthcheck/client.go](https://github.com/rycus86/podlike/blob/master/healthcheck/client.go) source code to see how this works.
 
+There is also `version` as a supported argument, that prints the version and build information of the Docker image built on [Travis](https://travis-ci.org/rycus86/podlike).
+
 ## License
 
 MIT

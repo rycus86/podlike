@@ -18,7 +18,18 @@ RUN if [ -n "$CC_PKG" ]; then \
 
 FROM scratch
 
-LABEL maintainer "Viktor Adam <rycus86@gmail.com>"
+ARG VERSION="dev"
+ARG GIT_COMMIT="unknown"
+ARG BUILD_TIMESTAMP="unknown"
+
+ENV VERSION="$VERSION"
+ENV GIT_COMMIT="$GIT_COMMIT"
+ENV BUILD_TIMESTAMP="$BUILD_TIMESTAMP"
+
+LABEL maintainer="Viktor Adam <rycus86@gmail.com>"
+
+LABEL com.github.rycus86.podlike.version="$VERSION"
+LABEL com.github.rycus86.podlike.commit="$GIT_COMMIT"
 
 COPY --from=builder /var/tmp/app /podlike
 
