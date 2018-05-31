@@ -28,6 +28,11 @@ func (c *Component) getMounts() ([]mount.Mount, error) {
 			ReadOnly: v.isReadOnly(),
 		}
 
+		sharedVolumeSource := c.client.GetSharedVolumeSource(mnt.Source)
+		if sharedVolumeSource != "" {
+			mnt.Source = sharedVolumeSource
+		}
+
 		if v.Bind.Propagation != "" {
 			mnt.BindOptions = &mount.BindOptions{
 				Propagation: mount.Propagation(v.Bind.Propagation),
