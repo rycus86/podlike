@@ -14,9 +14,10 @@ RUN if [ -n "$CC_PKG" ]; then \
     && export GOOS=linux \
     && export GOARCH=$CC_GOARCH \
     && export CGO_ENABLED=0 \
-    && go build -o /var/tmp/app -v .
+    && go build -o /var/out/main -v ./cmd/podlike \
+    && go build -o /var/out/hc   -v ./cmd/healthcheck
 
-FROM scratch
+FROM alpine
 
 ARG VERSION="dev"
 ARG BUILD_ARCH="unknown"
@@ -33,9 +34,9 @@ LABEL maintainer="Viktor Adam <rycus86@gmail.com>"
 LABEL com.github.rycus86.podlike.version="$VERSION"
 LABEL com.github.rycus86.podlike.commit="$GIT_COMMIT"
 
-COPY --from=builder /var/tmp/app /podlike
+COPY --from=builder /var/out/main  /podlike
+COPY --from=builder /var/out/hc    /healthcheck
 
-HEALTHCHECK --interval=2s --timeout=3s --retries=5 \
-    CMD [ "/podlike", "healthcheck" ]
+HEALTHCHECK --interval=2s --timeout=3s --retries=5 CMD [ "/healthcheck" ]
 
 ENTRYPOINT [ "/podlike" ]
