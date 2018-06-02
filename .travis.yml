@@ -33,6 +33,7 @@ jobs:
             --build-arg CC_PKG=$CC_PKG                \
             --build-arg CC_GOARCH=$CC_GOARCH          \
             --build-arg VERSION=$TRAVIS_BRANCH        \
+            --build-arg BUILD_ARCH=$BUILD_ARCH        \
             --build-arg GIT_COMMIT=$TRAVIS_COMMIT     \
             --build-arg BUILD_TIMESTAMP=$(date +%s)   \
             .
@@ -48,10 +49,12 @@ jobs:
           fi
       env:
         - DOCKER_TAG=amd64
+        - BUILD_ARCH=amd64
 
     - <<: *deploy-stage
       env:
         - DOCKER_TAG=armhf
+        - BUILD_ARCH=arm32v6
         - CC=arm-linux-gnueabihf-gcc
         - CC_PKG=gccgo-arm-linux-gnueabihf
         - CC_GOARCH=arm
@@ -59,6 +62,7 @@ jobs:
     - <<: *deploy-stage
       env:
         - DOCKER_TAG=aarch64
+        - BUILD_ARCH=arm64v8
         - CC=aarch64-linux-gnu-gcc
         - CC_PKG=gccgo-aarch64-linux-gnu
         - CC_GOARCH=arm64

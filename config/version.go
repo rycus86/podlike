@@ -10,6 +10,7 @@ import (
 
 type Version struct {
 	Tag       string
+	BuildArch string
 	GitCommit string
 	BuildDate time.Time
 }
@@ -18,10 +19,10 @@ func (v *Version) StringForCommandLine() string {
 	return strings.TrimSpace(fmt.Sprintf(`
 Podlike (https://github.com/rycus86/podlike)
 --------------------------------------------
-Version    : %s
+Version    : %s-%s
 Git commit : %s
 Built at   : %s
-`, v.Tag, v.GitCommit, v.BuildDate.Format(time.RFC3339)))
+`, v.Tag, v.BuildArch, v.GitCommit, v.BuildDate.Format(time.RFC3339)))
 }
 
 func parseVersion() *Version {
@@ -33,6 +34,7 @@ func parseVersion() *Version {
 
 	return &Version{
 		Tag:       getEnv("VERSION", "dev"),
+		BuildArch: getEnv("BUILD_ARCH", "unknown"),
 		GitCommit: getEnv("GIT_COMMIT", "unknown"),
 		BuildDate: time.Unix(timeAsInt, 0),
 	}
