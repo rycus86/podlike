@@ -17,7 +17,7 @@ RUN if [ -n "$CC_PKG" ]; then \
     && go build -o /var/out/main -v ./cmd/podlike \
     && go build -o /var/out/hc   -v ./cmd/healthcheck
 
-FROM alpine
+FROM scratch
 
 ARG VERSION="dev"
 ARG BUILD_ARCH="unknown"
