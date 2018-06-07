@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"github.com/rycus86/podlike/pkg/template"
 	"github.com/rycus86/podlike/pkg/version"
 	"os"
 )
@@ -30,17 +31,18 @@ func setupVariables() {
 }
 
 func Parse() *Configuration {
+	if len(os.Args) > 1 {
+		if os.Args[1] == "template" {
+			processTemplate()
+		} else if os.Args[1] == "version" {
+			printVersion()
+		}
+	}
+
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		if flag.Arg(0) == "version" {
-			v := version.Parse()
-
-			fmt.Println(v.StringForCommandLine())
-			os.Exit(0)
-		} else {
-			panic(fmt.Sprintf("Invalid command line argument: %s", flag.Arg(0)))
-		}
+		panic(fmt.Sprintf("Invalid command line argument: %s", flag.Arg(0)))
 	}
 
 	return &Configuration{
@@ -49,4 +51,16 @@ func Parse() *Configuration {
 		StreamLogs:   logs,
 		AlwaysPull:   pull,
 	}
+}
+
+func processTemplate() {
+	template.PrintTemplatedStack(os.Args[2:]...)
+	os.Exit(0)
+}
+
+func printVersion() {
+	v := version.Parse()
+
+	fmt.Println(v.StringForCommandLine())
+	os.Exit(0)
 }
