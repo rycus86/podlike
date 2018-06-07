@@ -1,8 +1,9 @@
-package config
+package flags
 
 import (
 	"flag"
 	"fmt"
+	"github.com/rycus86/podlike/pkg/config"
 	"github.com/rycus86/podlike/pkg/template"
 	"github.com/rycus86/podlike/pkg/version"
 	"os"
@@ -11,13 +12,6 @@ import (
 var (
 	pids, volumes, logs, pull bool
 )
-
-type Configuration struct {
-	SharePids    bool
-	ShareVolumes bool
-	StreamLogs   bool
-	AlwaysPull   bool
-}
 
 func init() {
 	setupVariables()
@@ -30,7 +24,7 @@ func setupVariables() {
 	flag.BoolVar(&pull, "pull", false, "Always pull the images for the components when starting")
 }
 
-func Parse() *Configuration {
+func Parse() *config.Configuration {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "template" {
 			processTemplate()
@@ -45,7 +39,7 @@ func Parse() *Configuration {
 		panic(fmt.Sprintf("Invalid command line argument: %s", flag.Arg(0)))
 	}
 
-	return &Configuration{
+	return &config.Configuration{
 		SharePids:    pids,
 		ShareVolumes: volumes,
 		StreamLogs:   logs,

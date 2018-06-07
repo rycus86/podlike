@@ -6,6 +6,7 @@ import (
 	"github.com/rycus86/podlike/pkg/component"
 	"github.com/rycus86/podlike/pkg/config"
 	"github.com/rycus86/podlike/pkg/controller"
+	"github.com/rycus86/podlike/pkg/flags"
 	"github.com/rycus86/podlike/pkg/healthcheck"
 	"os"
 	"os/signal"
@@ -119,7 +120,7 @@ func done(components []*component.Component) {
 }
 
 func main() {
-	configuration := config.Parse()
+	configuration := flags.Parse()
 
 	hcServer, err := healthcheck.Serve()
 	if err != nil {
