@@ -27,9 +27,17 @@ func setupVariables() {
 func Parse() *config.Configuration {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "template" {
-			processTemplate()
+
+			template.PrintTemplatedStack(os.Args[2:]...)
+			os.Exit(0)
+
 		} else if os.Args[1] == "version" {
-			printVersion()
+
+			v := version.Parse()
+
+			fmt.Println(v.StringForCommandLine())
+			os.Exit(0)
+
 		}
 	}
 
@@ -45,16 +53,4 @@ func Parse() *config.Configuration {
 		StreamLogs:   logs,
 		AlwaysPull:   pull,
 	}
-}
-
-func processTemplate() {
-	template.PrintTemplatedStack(os.Args[2:]...)
-	os.Exit(0)
-}
-
-func printVersion() {
-	v := version.Parse()
-
-	fmt.Println(v.StringForCommandLine())
-	os.Exit(0)
 }
