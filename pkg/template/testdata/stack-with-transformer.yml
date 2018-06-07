@@ -1,0 +1,18 @@
+version: '3.5'
+services:
+
+  example:
+    image: sample/transform
+    labels:
+      - original.label=transformer-example
+    ports:
+      - 8080:4000
+
+x-podlike:
+  example:
+#    pod: templates/simple/pod.yml
+    transformer: templates/simple/transformer.yml
+#    templates:
+#      - templates/simple/templates.yml
+#    copy:
+#      - templates/simple/copies.yml

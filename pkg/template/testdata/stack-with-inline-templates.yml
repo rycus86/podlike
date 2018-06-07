@@ -1,0 +1,34 @@
+version: '3.5'
+
+x-podlike-templates:
+  - &component-template
+    inline: |
+      main:
+        labels:
+          place: component
+          svc.name: 'svc_{{ .Service.Name }}'
+
+  - &sidecar-template
+    inline: |
+      sidecar:
+        image: sample/sidecar
+        command: --port 8080
+
+services:
+
+  inline:
+    image: sample/inline
+    command: -exec
+    x-podlike:
+      pod:
+        inline: |
+          controller:
+            image: rycus86/podlike:test
+            command: -logs -pids
+            labels:
+              place: controller
+      transformer:
+        <<: *component-template
+      templates:
+        - <<: *sidecar-template
+

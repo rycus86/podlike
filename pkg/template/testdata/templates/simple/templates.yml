@@ -1,0 +1,8 @@
+sidecar:
+  image: sample/sidecar
+  environment:
+    - TEST=true
+
+logger:
+  image: sample/logger
+  command: -o /dev/stdout

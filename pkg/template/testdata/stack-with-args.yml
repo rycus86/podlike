@@ -1,0 +1,18 @@
+version: '3.5'
+services:
+
+  with-args:
+    image: sample/args
+    x-podlike:
+      transformer: templates/args/transformer.yml
+      args:
+        Key1: string
+        Key2:
+          Item: 42
+
+x-podlike:
+  args:
+    Key1: ignored
+    Key3: 
+      - global
+

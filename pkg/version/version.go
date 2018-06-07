@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	DEFAULT_VERSION = "dev"
+)
+
 type Version struct {
 	Tag       string
 	BuildArch string
@@ -33,7 +37,7 @@ func Parse() *Version {
 	}
 
 	return &Version{
-		Tag:       getEnv("VERSION", "dev"),
+		Tag:       getEnv("VERSION", DEFAULT_VERSION),
 		BuildArch: getEnv("BUILD_ARCH", "unknown"),
 		GitCommit: getEnv("GIT_COMMIT", "unknown"),
 		BuildDate: time.Unix(timeAsInt, 0),

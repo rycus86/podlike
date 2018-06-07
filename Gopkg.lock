@@ -9,6 +9,19 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/docker/cli"
+  packages = [
+    "cli/compose/interpolation",
+    "cli/compose/loader",
+    "cli/compose/schema",
+    "cli/compose/template",
+    "cli/compose/types",
+    "opts"
+  ]
+  revision = "2014e991ee3ff61c0a479e6278d8b831f67f3261"
+
+[[projects]]
+  branch = "master"
   name = "github.com/docker/distribution"
   packages = [
     "digestset",
@@ -63,6 +76,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/imdario/mergo"
+  packages = ["."]
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
+
+[[projects]]
   name = "github.com/mattn/go-shellwords"
   packages = ["."]
   revision = "02e3cf038dcea8290e44424da473dd12be796a8a"
@@ -96,6 +115,36 @@
   version = "v0.8.0"
 
 [[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonpointer"
+  packages = ["."]
+  revision = "4e3ac2762d5f479393488629ee9370b50873b3a6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonreference"
+  packages = ["."]
+  revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonschema"
+  packages = ["."]
+  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
@@ -109,7 +158,10 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["windows"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "3ccc7e5779793fd54564baf60c51bf017955e0ba"
 
 [[projects]]
@@ -121,6 +173,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "467d94305b7803ebbef17602e38ffdfae6b30553d8de7e9b8e343f952852e545"
+  inputs-digest = "18ed2187e35a944a07988f76c789db3206177e637e8521bcb1af993d6b08cb97"
   solver-name = "gps-cdcl"
   solver-version = 1

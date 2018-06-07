@@ -1,0 +1,8 @@
+pod:
+  image: rycus86/podlike:testing
+  command: -logs -pids -pull
+  labels:
+    example.container.label: test-pod
+{{ range $key, $value := .Service.Labels }}
+    {{ $key }}: {{ $value }}
+{{ end }}

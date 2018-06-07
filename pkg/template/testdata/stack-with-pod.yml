@@ -1,0 +1,20 @@
+version: '3.5'
+services:
+
+  example:
+    image: sample/svc
+    labels:
+      - example.label=test-label
+    ports:
+      - 8080:4000
+    volumes:
+      - source:/var/target:nocopy
+
+x-podlike:
+  example:
+    pod: templates/simple/pod.yml
+#    transformer: templates/simple/transformer.yml
+#    templates:
+#      - templates/simple/templates.yml
+#    copy:
+#      - templates/simple/copies.yml

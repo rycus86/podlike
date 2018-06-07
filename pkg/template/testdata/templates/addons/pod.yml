@@ -1,0 +1,5 @@
+pod:
+  image: rycus86/podlike:addons
+  command: -logs
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro

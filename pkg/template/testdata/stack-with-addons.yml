@@ -1,0 +1,17 @@
+version: '3.5'
+services:
+
+  addons:
+    image: sample/addons
+    x-podlike:
+      pod:
+        - templates/addons/pod.yml
+        - templates/addons/addon-shared-volume.yml
+      transformer:
+        - templates/addons/transformer.yml
+        - templates/addons/addon-shared-volume.yml
+      templates:
+        - templates/addons/template-sidecar.yml
+        - templates/addons/addon-sidecar-metrics.yml
+#      copy:
+#        - templates/simple/copies.yml

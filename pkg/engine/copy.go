@@ -7,6 +7,6 @@ import (
 )
 
 func (e *Engine) CopyToContainer(containerID string, destPath string, content io.Reader) error {
-	// TODO proper context
-	return e.api.CopyToContainer(context.TODO(), containerID, destPath, content, types.CopyToContainerOptions{})
+	// TODO is context.Background() appropriate here?
+	return e.api.CopyToContainer(context.Background(), containerID, destPath, content, types.CopyToContainerOptions{})
 }

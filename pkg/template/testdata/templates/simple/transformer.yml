@@ -1,0 +1,6 @@
+transformed:
+  image: {{ .Service.Image }}
+  labels:
+{{- range $key, $value := .Service.Labels }}
+    modified-{{ $key }}: {{ $value }}
+{{ end }}

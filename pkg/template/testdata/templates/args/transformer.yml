@@ -1,0 +1,7 @@
+app:
+  labels:
+    key1: '{{ .Args.Key1 }}'
+    key2: '{{ .Args.Key2.Item }}'
+{{- range $idx, $item := .Args.Key3 }}
+    key3-{{ $idx }}: str-{{ $item }}
+{{ end }}

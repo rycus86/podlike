@@ -1,0 +1,18 @@
+version: '3.5'
+services:
+
+  copies:
+    image: sample/copy
+    labels:
+      Target: a/b
+    x-podlike:
+      copy:
+        - inline: >
+            app: /one:/liner
+        - inline: |
+            app:
+              - /src:/target
+              - /from:/to/{{ .Service.Labels.Target }}
+        - inline: |
+            app:
+              /source: /target

@@ -1,0 +1,21 @@
+version: '3.5'
+services:
+
+  example:
+    image: sample/xmpl
+    command: /app -v
+    labels:
+      - example.label=test-label
+    x-podlike:
+      pod:
+        - templates/simple/pod.yml
+
+  templated:
+    image: sample/tmpl
+    labels:
+      lbl: label
+    x-podlike:
+      transformer:
+        - templates/simple/transformer.yml
+      templates:
+        - templates/simple/templates.yml

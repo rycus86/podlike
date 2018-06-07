@@ -1,0 +1,6 @@
+sidecar:
+  command: ['--metrics', '8080']
+
+metrics:
+  image: sample/metrics
+  command: --target :8080
