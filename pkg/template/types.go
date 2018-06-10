@@ -27,6 +27,7 @@ type transformConfiguration struct {
 type podTemplate struct {
 	Template string
 	Inline   bool
+	Http     bool
 }
 
 type templateVars struct {

@@ -31,7 +31,7 @@ func podTemplateHookFunc() mapstructure.DecodeHookFunc {
 
 			item := reflect.ValueOf(data).Interface()
 			if m, ok := item.(map[string]interface{}); ok {
-				if inline, ok := m["inline"]; ok {
+				if inline, ok := m[TypeInline]; ok {
 
 					if t == reflect.TypeOf(podTemplate{}) {
 						return podTemplate{Template: inline.(string), Inline: true}, nil
@@ -41,6 +41,18 @@ func podTemplateHookFunc() mapstructure.DecodeHookFunc {
 							{Template: inline.(string), Inline: true},
 						}, nil
 					}
+
+				} else if httpSource, ok := m[TypeHttp]; ok {
+
+					if t == reflect.TypeOf(podTemplate{}) {
+						return podTemplate{Template: httpSource.(string), Http: true}, nil
+
+					} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
+						return []podTemplate{
+							{Template: httpSource.(string), Http: true},
+						}, nil
+					}
+
 				}
 			}
 

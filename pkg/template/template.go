@@ -3,6 +3,8 @@ package template
 import (
 	"bytes"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"net/http"
 	"path"
 	"text/template"
 )
@@ -38,8 +40,8 @@ func (t *podTemplate) render(tc *transformConfiguration) map[string]interface{} 
 }
 
 func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
-	name := "inline"
-	if !t.Inline {
+	name := TypeInline
+	if !t.Inline && !t.Http {
 		name = path.Base(t.Template)
 	}
 
@@ -52,11 +54,23 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 
 	var err error
 
-	if t.Inline {
+	if t.Http {
+		if resp, err := http.Get(t.Template); err == nil && resp.StatusCode == 200 {
+			defer resp.Body.Close()
+
+			if content, err := ioutil.ReadAll(resp.Body); err == nil {
+				tmpl, err = tmpl.Parse(string(content))
+			}
+		}
+
+	} else if t.Inline {
 		tmpl, err = tmpl.Parse(t.Template)
+
 	} else {
 		tmpl, err = tmpl.ParseFiles(path.Join(workingDir, t.Template))
+
 	}
+
 	if err != nil {
 		panic(err)
 	}

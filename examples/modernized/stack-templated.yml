@@ -1,0 +1,519 @@
+version: '3.5'
+
+# extension field for common Podlike settings and templates
+x-podlike-templates:
+
+  # the pod template enables logging from the controller
+  - &with-logging-enabled
+    inline: |
+      pod:
+        image: rycus86/podlike
+        command: -logs
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
+  # expose the Traefik dashboard for each task
+  - &with-traefik-debug-port
+    inline: |
+      pod:
+        ports:
+          - :8080
+
+  # expose the Consul UI for each task
+  - &with-consul-debug-port
+    inline: |
+      pod:
+        ports:
+          - :8500
+
+  # use the transformers to add the appropriate log volume to the main component
+  - &app-template
+    inline: |
+      app:
+        volumes:
+          - {{ .Service.Name }}_logs:/var/log/apps
+        environment:
+          - LOG_PATH=/var/log/apps/{{ .Service.Name }}-app.log
+
+
+  # the template that add the Traefik reverse proxy component
+  - &proxy-component
+    inline: |
+      proxy:
+        image: traefik
+        command: >
+          --accesslog --accesslog.filepath=/var/log/apps/{{ .Service.Name }}-proxy.access.log
+          --traefiklog --traefiklog.filepath=/var/log/apps/{{ .Service.Name }}-proxy.log
+          --consulcatalog --consulcatalog.watch
+          --consulcatalog.constraints='tag=={{ .Service.Name }}'
+          --consulcatalog.endpoint=127.0.0.1:8500
+          --consulcatalog.frontendrule='PathPrefix: /{{ "{{.ServiceName}}" }}'
+          --tracing.jaeger --tracing.servicename={{ .Service.Name }}
+          --api --api.dashboard --metrics.prometheus
+        volumes:
+          - {{ .Service.Name }}_logs:/var/log/apps
+
+  # the template for the OpenTracing compatible Jaeger agent's component
+  - &tracing-component
+    inline: |
+      tracing:
+        image: jaegertracing/jaeger-agent
+        environment:
+          COLLECTOR_HOST_PORT: jaeger-collector:14267
+
+  # the template for the Consul agent to register in service discovery
+  - &service-discovery-component
+    inline: |
+      sd:
+        image: consul
+        command: agent -join=sd-server -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth2
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {{ range $idx, $config := .Args.traefik }}
+                  {{ if gt $idx 0 }} , {{ end }}
+                {
+                  "name": "{{ .name }}",
+                  "tags": [
+                    {{ range $ti, $tag := .tags }}
+                      {{ if gt $ti 0 }} , {{ end }} "traefik.{{ $tag }}"
+                    {{ end }}
+                  ],
+                  {{ if .address }}
+                    "address": "{{ .address }}",
+                  {{ end }}
+                  "port": {{ .port }},
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "{{ .check }}"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+                {{ end}}
+              ]
+            }
+
+  - &logging-component
+    inline: |
+      logging:
+        image: fluent/fluent-bit
+        command: >
+          /fluent-bit/bin/fluent-bit
+            -i tail -p 'path=/var/log/apps/{{ .Service.Name }}-app.log' -t '{{ .Service.Name }}.app'
+            -i tail -p 'path=/var/log/apps/{{ .Service.Name }}-proxy.access.log' -t '{{ .Service.Name }}.proxy.access'
+            -i tail -p 'path=/var/log/apps/{{ .Service.Name }}-proxy.log' -t '{{ .Service.Name }}.proxy.out'
+            -o forward -p 'host=logging-server' -m '*' -v
+        volumes:
+          - {{ .Service.Name }}_logs:/var/log/apps
+
+services:
+
+  aggregator:
+    image: rycus86/sample-flask-base
+    command: |
+      python -c "
+      import os
+      import logging
+      import requests
+      from flask import Flask, request, redirect
+
+      logging.basicConfig(filename=os.environ.get('LOG_PATH', '/dev/stdout'), level='INFO')
+
+      app = Flask(__name__)
+
+      @app.route('/')
+      def serve():
+          incoming_headers = {k: v for k, v in request.headers}
+
+          data_response = requests.get('http://localhost/data/fetch', headers=incoming_headers)
+
+          if data_response.status_code != 200:
+              return 'Oops, no data', 500, {}
+
+          render_response = requests.post('http://localhost/renderer/render',
+                                          json=data_response.json(), headers=incoming_headers)
+
+          if render_response.status_code != 200:
+              return 'Oops, failed to render', 500, {}
+
+          return render_response.text
+
+      @app.route('/update', methods=['POST'])
+      def update():
+          incoming_headers = {k: v for k, v in request.headers}
+
+          data_response = requests.post('http://localhost/data/set',
+                                        data=request.form, headers=incoming_headers)
+
+          if data_response.status_code != 200:
+              return 'Oops, update failed', 500, {}
+
+          return redirect(data_response.json().get('returnPath'))
+
+      app.run(host='127.0.0.1', port=5000, threaded=True)
+      "
+    x-podlike:
+      transformer:
+        - <<: *app-template
+      templates:
+        - <<: *proxy-component
+        - <<: *tracing-component
+        - <<: *service-discovery-component
+        - <<: *logging-component
+      pod:
+        - <<: *with-logging-enabled
+        - <<: *with-traefik-debug-port
+        - <<: *with-consul-debug-port
+      args:
+        traefik:
+          - name: entry
+            port: 80
+            check: pgrep python
+            tags:
+              - 'tags=external'
+              - 'frontend.rule=PathPrefix: /; AddPrefix: /entry'
+          - name: local-aggregator
+            port: 5000
+            address: 127.0.0.1
+            check: pgrep python
+            tags:
+              - 'tags=aggregator'
+              - 'frontend.rule=PathPrefixStrip: /entry'
+          - name: aggregator-metrics
+            port: 8080
+            check: pgrep traefik
+            tags:
+              - 'prom.metrics=enabled'
+
+  data-server:
+    image: rycus86/sample-flask-base
+    command: |
+      python -c "
+      import os
+      import json
+      import base64
+      import logging
+      import requests
+      from flask import Flask, request, jsonify
+
+      logging.basicConfig(filename=os.environ.get('LOG_PATH', '/dev/stdout'), level='INFO')
+
+      app = Flask(__name__)
+
+      def do_request(url, method='get', data=None, fail_on_error=True):
+          headers = {k: v for k, v in request.headers
+                     if k.lower() not in ('content-type', 'content-length')}
+                     # make sure the `Content-Type` and `Content-Length` headers are set by requests
+
+          response = requests.request(method, url, data=data, headers=headers)
+
+          if response.status_code != 200:
+              if fail_on_error:
+                  raise Exception('Request failed: %s' % response)
+              else:
+                  return None
+
+          return response.text
+
+      @app.route('/fetch')
+      def render():
+          static_config = do_request('http://localhost/static-files/config.json')
+          static_styles = do_request('http://localhost/static-files/styles.css')
+
+          kv_data = do_request('http://localhost/kv/data?recurse=true', fail_on_error=False)
+
+          result = dict(json.loads(static_config))
+          result['data'] = {}
+
+          if kv_data:
+              for item in json.loads(kv_data):
+                  key, value = item.get('Key'), item.get('Value')
+                  if key and value:
+                      key = key.split('/')[-1]
+                      value = base64.b64decode(value)
+
+                      result['data'][key] = value
+
+          result['styles'] = static_styles
+
+          return jsonify(result)
+
+      @app.route('/set', methods=['POST'])
+      def set_parameter():
+          for name, value in request.form.items():
+              do_request('http://localhost/kv/data/%s' % name, method='put', data=value)
+
+          static_config = do_request('http://localhost/static-files/config.json')
+
+          return jsonify(returnPath=json.loads(static_config).get('returnPath'))
+
+      app.run(host='127.0.0.1', port=5000, threaded=True)
+      "
+    x-podlike:
+      transformer:
+        - <<: *app-template
+      templates:
+        - <<: *proxy-component
+        - <<: *tracing-component
+        - <<: *service-discovery-component
+        - <<: *logging-component
+      pod:
+        - <<: *with-logging-enabled
+        - <<: *with-traefik-debug-port
+        - <<: *with-consul-debug-port
+      args:
+        traefik:
+          - name: data
+            port: 80
+            check: pgrep python
+            tags:
+              - 'tags=aggregator'
+          - name: local-data
+            port: 5000
+            address: 127.0.0.1
+            check: pgrep python
+            tags:
+              - 'tags=data-server'
+              - 'frontend.rule=PathPrefixStrip: /data'
+          - name: data-metrics
+            port: 8080
+            check: pgrep traefik
+            tags:
+              - 'prom.metrics=enabled'
+          - name: kv-consul
+            port: 8500
+            address: 127.0.0.1
+            check: pgrep python
+            tags:
+              - 'tags=data-server'
+              - 'frontend.rule=PathPrefix: /kv; ReplacePathRegex: ^/kv/(.*) /v1/kv/$$1'
+
+  renderer:
+    image: rycus86/sample-flask-base
+    command: |
+      python -c '
+      import os
+      import logging
+      from flask import Flask, request, render_template_string
+
+      logging.basicConfig(filename=os.environ.get("LOG_PATH", "/dev/stdout"), level="INFO")
+
+      app = Flask(__name__)
+
+      @app.route("/render", methods=["POST"])
+      def render():
+          return render_template_string("""
+          <html><head><style>{{ styles }}</style></head><body>
+          <h2>Example form</h2>
+          {% for name in names %}
+          <div class="form-item">
+              <form action="{{ updatePath }}" method="post">
+                  <span><b>{{ name }}</b>: </span>
+                  <input type="text" name="{{ name }}" value="{{ data.get(name, "") }}"/>
+                  <input type="submit" value="Update"/>
+              </form>
+          <div>
+          {% endfor %}
+          </body></html>
+          """, **request.get_json())
+
+      app.run(host="127.0.0.1", port=5000, threaded=True)
+      '
+    x-podlike:
+      transformer:
+        - <<: *app-template
+      templates:
+        - <<: *proxy-component
+        - <<: *tracing-component
+        - <<: *service-discovery-component
+        - <<: *logging-component
+      pod:
+        - <<: *with-logging-enabled
+        - <<: *with-traefik-debug-port
+        - <<: *with-consul-debug-port
+      args:
+        traefik:
+          - name: renderer
+            port: 80
+            check: pgrep python
+            tags:
+              - 'tags=aggregator'
+          - name: local-renderer
+            port: 5000
+            address: 127.0.0.1
+            check: pgrep python
+            tags:
+              - 'tags=renderer'
+              - 'frontend.rule=PathPrefixStrip: /renderer'
+          - name: renderer-metrics
+            port: 8080
+            check: pgrep traefik
+            tags:
+              - 'prom.metrics=enabled'
+
+  # web server for static files
+
+  static-files:
+    image: nginx
+    configs:
+      - source: static-config
+        target: /tmp/static-config.json
+      - source: static-styles
+        target: /tmp/static-styles.css
+    x-podlike:
+      templates:
+        - <<: *service-discovery-component
+      copy:
+        - inline: |
+            app:
+              /tmp/static-config.json: /usr/share/nginx/html/config.json
+              /tmp/static-styles.css:  /usr/share/nginx/html/styles.css
+      pod:
+        - <<: *with-logging-enabled
+        - <<: *with-consul-debug-port
+      args:
+        traefik:
+          - name: static-files
+            port: 80
+            check: pgrep nginx
+            tags:
+              - 'tags=data-server'
+              - 'frontend.rule=PathPrefixStrip: /static-files'
+
+  # external router
+
+  router:
+    image: traefik
+    command: >
+      --api --api.dashboard --metrics.prometheus
+      --tracing.jaeger --tracing.servicename=router
+      --tracing.jaeger.localagenthostport=jaeger-stack-agent:6831
+      --consulcatalog --consulcatalog.watch
+      --consulcatalog.constraints='tag==external'
+      --consulcatalog.endpoint=sd-server:8500
+      --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+    ports:
+      - 8080:8080
+      - 80:80
+
+  # main service discovery server
+
+  sd-server:
+    image: consul
+    environment:
+      - CONSUL_BIND_INTERFACE=eth2
+    ports:
+      - 8500:8500
+
+  # EFK stack (used for logs and traces)
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.4
+    environment:
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      discovery.type: single-node
+      http.host: 0.0.0.0
+      transport.host: 127.0.0.1
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:6.2.4
+    ports:
+      - 5601:5601
+    healthcheck:
+      # hack: use the healthcheck to auto-create the index pattern in Kibana
+      test: |
+        (curl -fs "http://127.0.0.1:5601/api/saved_objects/?type=index-pattern&per_page=3" | grep -v '"total":0') || \
+        ((curl -fs -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+           "http://127.0.0.1:5601/api/saved_objects/index-pattern/fluent-bit" \
+           -d"{\"attributes\":{\"title\":\"fluent-bit\",\"timeFieldName\":\"@timestamp\"}}") && \
+         (curl -fs -XPOST -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+            "http://127.0.0.1:5601/api/kibana/settings/defaultIndex" \
+            -d"{\"value\":\"fluent-bit\"}"))
+      interval: 3s
+      timeout: 15s
+      start_period: 1m
+
+  logging-server:
+    image: fluent/fluent-bit:0.13.0
+    command: >
+      /fluent-bit/bin/fluent-bit
+        -i forward -o stdout
+        -o es -p 'Host=elasticsearch' -p 'Include_Tag_Key=on' -p 'Tag_Key=@log_name'
+        -m '*' -v
+
+  # Jaeger tracing
+
+  jaeger-stack-agent:
+    image: jaegertracing/jaeger-agent
+    environment:
+      COLLECTOR_HOST_PORT: jaeger-collector:14267
+
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://elasticsearch:9200
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://elasticsearch:9200
+    ports:
+      - 16686:16686
+
+  # Prometheus + Grafana for metrics
+
+  prometheus:
+    image: prom/prometheus:v2.2.1
+    configs:
+      - source: prometheus-config
+        target: /etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:5.1.3
+    configs:
+      - source: grafana-config
+        target: /etc/grafana/grafana.ini
+      - source: grafana-datasource
+        target: /etc/grafana/provisioning/datasources/default.yaml
+      - source: grafana-dashboard-config
+        target: /etc/grafana/provisioning/dashboards/default.yaml
+      - source: grafana-dashboard-example
+        target: /var/lib/grafana/dashboards/example.json
+    ports:
+      - 3000:3000
+
+volumes:
+  aggregator_logs:
+    name: 'aggregator_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: aggregator_logs
+  data_server_logs:
+    name: 'data_server_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: data_server_logs
+  renderer_logs:
+    name: 'renderer_logs_{{.Task.ID}}'
+    labels:
+      com.github.rycus86.podlike.volume-ref: renderer_logs
+
+configs:
+  static-config:
+    file: ./static-content/config.json
+  static-styles:
+    file: ./static-content/styles.css
+  prometheus-config:
+    file: ./prometheus/config.yml
+  grafana-config:
+    file: ./grafana/config.ini
+  grafana-datasource:
+    file: ./grafana/datasource.yaml
+  grafana-dashboard-config:
+    file: ./grafana/dashboard.yaml
+  grafana-dashboard-example:
+    file: ./grafana/dashboards/example.json

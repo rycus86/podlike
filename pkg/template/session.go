@@ -17,17 +17,17 @@ func (ts *transformSession) prepareConfiguration() {
 }
 
 func (ts *transformSession) collectTopLevelConfigurations(configFile types.ConfigFile) {
-	if configSection, ok := configFile.Config["x-podlike"]; ok {
+	if configSection, ok := configFile.Config[XPodlikeExtension]; ok {
 		globalConfig, ok := configSection.(map[string]interface{})
 		if !ok {
 			panic("top level x-podlike config is not a mapping")
 		}
 
 		// extract the top level global arguments first
-		if args, ok := globalConfig["args"]; ok {
+		if args, ok := globalConfig[ArgsProperty]; ok {
 			if mArgs, ok := args.(map[string]interface{}); ok {
 				mergeRecursively(ts.Args, mArgs)
-				delete(globalConfig, "args")
+				delete(globalConfig, ArgsProperty)
 			} else {
 				panic("template args is not a mapping")
 			}
@@ -56,7 +56,7 @@ func (ts *transformSession) collectTopLevelConfigurations(configFile types.Confi
 }
 
 func (ts *transformSession) collectServiceLevelConfigurations(configFile types.ConfigFile) {
-	services, ok := configFile.Config["services"]
+	services, ok := configFile.Config[ServicesProperty]
 	if !ok {
 		return // ok, some YAMLs might only define volumes and such
 	}
@@ -72,14 +72,14 @@ func (ts *transformSession) collectServiceLevelConfigurations(configFile types.C
 			panic(fmt.Sprintf("service definition is not a mapping for %s", serviceName))
 		}
 
-		configSection, ok := mDefinition["x-podlike"]
+		configSection, ok := mDefinition[XPodlikeExtension]
 		if !ok {
 			continue
 		}
 
 		if v := schema.Version(configFile.Config); versions.LessThan(v, "3.7") {
 			// we have to delete the extension key below schema version 3.7
-			delete(mDefinition, "x-podlike")
+			delete(mDefinition, XPodlikeExtension)
 		}
 
 		var config transformConfiguration

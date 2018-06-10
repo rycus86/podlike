@@ -21,7 +21,7 @@ pod:
 func getTagForPod() string {
 	v := version.Parse()
 
-	if v.Tag == version.DEFAULT_VERSION {
+	if v.Tag == version.DEFAULT_VERSION || v.Tag == "master" {
 		return "latest"
 	} else {
 		return v.Tag
