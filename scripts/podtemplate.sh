@@ -2,7 +2,7 @@
 
 TAG=${PODLIKE_VERSION:-latest}
 
-docker run --rm -it         \
+docker run --rm -i          \
     -v $PWD:/workspace:ro   \
     -w /workspace           \
     rycus86/podlike:${TAG}  \
