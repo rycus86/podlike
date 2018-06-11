@@ -7,10 +7,7 @@ x-podlike-templates:
   - &with-logging-enabled
     inline: |
       pod:
-        image: rycus86/podlike
         command: -logs
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
 
   # expose the Traefik dashboard for each task
   - &with-traefik-debug-port

@@ -113,7 +113,6 @@ var (
 		"extra_hosts",
 		"healthcheck",
 		"hostname",
-		"image",
 		"ipc",
 		"isolation",
 		"labels",

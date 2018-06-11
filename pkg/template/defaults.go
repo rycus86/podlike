@@ -5,6 +5,15 @@ import (
 	"github.com/rycus86/podlike/pkg/version"
 )
 
+func getMinimalPodProperties(name string) map[string]interface{} {
+	return map[string]interface{}{
+		name: map[string]interface{}{
+			"image":   "rycus86/podlike:" + getTagForPod(),
+			"volumes": []string{"/var/run/docker.sock:/var/run/docker.sock:ro"},
+		},
+	}
+}
+
 func getDefaultPodTemplate() podTemplate {
 	return podTemplate{
 		Template: fmt.Sprintf(`

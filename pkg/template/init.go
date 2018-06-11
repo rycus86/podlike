@@ -1,16 +1,21 @@
 package template
 
 import (
-	"errors"
 	"github.com/docker/cli/cli/compose/loader"
 	"github.com/docker/cli/cli/compose/types"
 	"io/ioutil"
+	"os"
 	"path"
 )
 
-func newSession(inputFiles ...string) (*transformSession, error) {
+func newSession(inputFiles ...string) *transformSession {
 	if len(inputFiles) == 0 {
-		return nil, errors.New("no input files given")
+		panic("No input files given")
+	}
+
+	// special case for reading the input YAML from the standard input
+	if len(inputFiles) == 1 && inputFiles[0] == "-" {
+		inputFiles = []string{os.Stdin.Name()}
 	}
 
 	session := &transformSession{
@@ -60,5 +65,5 @@ func newSession(inputFiles ...string) (*transformSession, error) {
 		}
 	}
 
-	return session, nil
+	return session
 }

@@ -1,0 +1,13 @@
+version: '3.5'
+services:
+
+  minimal:
+    image: sample/minimal
+
+x-podlike:
+  minimal:
+    pod:
+      inline: |
+        pod:
+          labels:
+            - sample.type=minimal

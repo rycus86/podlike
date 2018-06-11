@@ -1,0 +1,12 @@
+version: '3.5'
+services:
+
+  custom-controller:
+    image: sample/custom
+
+x-podlike:
+  custom-controller:
+    pod:
+      inline: |
+        pod:
+          image: forked/podlike

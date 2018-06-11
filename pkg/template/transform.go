@@ -9,10 +9,7 @@ import (
 // loads and transforms them using the templates,
 // and returns the resulting YAML as string.
 func Transform(inputFiles ...string) string {
-	session, err := newSession(inputFiles...)
-	if err != nil {
-		panic(err)
-	}
+	session := newSession(inputFiles...)
 
 	for serviceName, config := range session.Configurations {
 		index := config.getServiceIndex()
@@ -62,6 +59,9 @@ func executePodTemplates(tc *transformConfiguration) types.ServiceConfig {
 	}
 
 	mergeServiceProperties(definition, tc.getServiceConfig(), mergedPodKeys)
+
+	// add in some defaults if still missing at this point (image and volumes, for example)
+	mergeRecursively(definition, getMinimalPodProperties(tc.Service.Name))
 
 	converted := convertToServices(definition, tc.Session.WorkingDir)
 	if len(converted) != 1 {

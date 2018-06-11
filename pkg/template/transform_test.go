@@ -12,6 +12,10 @@ import (
 	"testing"
 )
 
+var (
+	nonDefaultImage = false
+)
+
 func TestTransform_Pod(t *testing.T) {
 	output := Transform("testdata/stack-with-pod.yml")
 	verifyTemplatedComponent(t, output, "example", "app",
@@ -223,6 +227,36 @@ func TestTransform_Copy(t *testing.T) {
 		})
 }
 
+func TestTransform_CustomController(t *testing.T) {
+	nonDefaultImage = true
+	defer func() {
+		nonDefaultImage = false
+	}()
+
+	output := Transform("testdata/stack-with-custom-controller-image.yml")
+	verifyTemplatedComponent(t, output, "custom-controller", "app",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return s.Image == "forked/podlike"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/custom"
+		})
+}
+
+func TestTransform_Defaults(t *testing.T) {
+	output := Transform("testdata/stack-with-minimal-templates.yml")
+	verifyTemplatedComponent(t, output, "minimal", "app",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return strings.HasPrefix(s.Image, "rycus86/podlike:")
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/minimal"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return hasLabel("sample.type", "minimal", s.Labels)
+		})
+}
+
 func verifyTemplatedComponent(
 	t *testing.T, output string, serviceName string, componentName string,
 	expectations ...func(*component.Component, *types.ServiceConfig) bool) {
@@ -245,7 +279,7 @@ func verifyTemplatedComponent(
 
 	service := services[serviceName].(map[interface{}]interface{})
 
-	if !strings.HasPrefix(service["image"].(string), "rycus86/podlike") {
+	if !nonDefaultImage && !strings.HasPrefix(service["image"].(string), "rycus86/podlike") {
 		t.Error("Unexpected image:", service["image"])
 	}
 
