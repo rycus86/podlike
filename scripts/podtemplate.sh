@@ -1,5 +1,10 @@
 #!/usr/bin/env sh
 
+DEBUG=${DEBUG:-no}
+if [ "$DEBUG" != "no" ]; then
+    set -x
+fi
+
 TAG=${PODLIKE_VERSION:-latest}
 
 print_deploy_help() {
@@ -64,13 +69,16 @@ exec_deploy() {
 
     # generate the YAML ouput from the templates
     CONVERTED=$(docker run --rm -i -v $PWD:/workspace:ro -w /workspace rycus86/podlike:${TAG} template $COMPOSE_FILES 2>&1)
-    if [ "$?" != "0" ]; then
+    RESULT_CODE="$?"
+    if [ "$RESULT_CODE" != "0" ]; then
         echo "$CONVERTED"
-        exit 1
+        exit ${RESULT_CODE}
     fi
 
     # do the actual stack deployment
-    echo """$CONVERTED""" | docker stack deploy -c - $STACK_DEPLOY_ARGS
+    cat << END_OF_STACK_YML | docker stack deploy -c - $STACK_DEPLOY_ARGS
+${CONVERTED}
+END_OF_STACK_YML
 }
 
 exec_print() {

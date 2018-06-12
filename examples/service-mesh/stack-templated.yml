@@ -1,0 +1,265 @@
+version: '3.5'
+
+x-podlike-templates:
+
+  - &proxy
+    inline: |
+      traefik:
+        image: traefik
+        command: >
+          --consulcatalog
+          --consulcatalog.watch
+          --consulcatalog.prefix={{ .Args.Proxy.Catalog.Prefix }}
+          --consulcatalog.constraints='tag=={{ .Args.Proxy.ServiceDiscovery.Constraint }}'
+          --consulcatalog.endpoint=127.0.0.1:{{ .Args.Proxy.ServiceDiscovery.Port }}
+          --consulcatalog.frontendrule='PathPrefix: /{{ "{{.ServiceName}}" }}'
+          --tracing.backend=zipkin
+          --tracing.zipkin
+          --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+          --tracing.servicename={{ .Args.Proxy.Tracing.ServiceName }}
+
+  - &service-discovery
+    inline: |
+      consul-agent:
+        image: consul
+        command: agent -join=consul -enable-script-checks
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+          CONSUL_LOCAL_CONFIG: |
+            {
+              "services": [
+                {
+                  "name": "{{ .Args.ServiceDiscovery.External.Name }}",
+                  "tags": ["traefik.tags={{ .Args.ServiceDiscovery.External.Tags }}"],
+                  "port": {{ .Args.ServiceDiscovery.External.Port }},
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                },
+                {
+                  "name": "{{ .Args.ServiceDiscovery.Internal.Name }}",
+                  "tags": [
+                    "{{ .Args.Proxy.Catalog.Prefix }}.tags={{ .Args.ServiceDiscovery.Internal.Tags }}",
+                    "{{ .Args.Proxy.Catalog.Prefix }}.frontend.rule=PathPrefixStrip: {{ .Args.ServiceDiscovery.Internal.Prefix }}"
+                    {{ if .Args.ServiceDiscovery.Internal.RateLimit }}
+                    , "{{ .Args.Proxy.Catalog.Prefix }}.frontend.rateLimit.extractorFunc=client.ip"
+                    , "{{ .Args.Proxy.Catalog.Prefix }}.frontend.rateLimit.rateSet.rateSet1.average=10"
+                    , "{{ .Args.Proxy.Catalog.Prefix }}.frontend.rateLimit.rateSet.rateSet1.burst=15"
+                    , "{{ .Args.Proxy.Catalog.Prefix }}.frontend.rateLimit.rateSet.rateSet1.period=3s"
+                    {{ end }}
+                  ],
+                  "address": "127.0.0.1",
+                  "port": {{ .Args.ServiceDiscovery.Internal.Port }},
+                  "checks": [
+                    {
+                      "args": ["sh", "-c", "pgrep python"],
+                      "interval": "2s",
+                      "status": "passing"
+                    },
+                    {
+                      "args": ["sh", "-c", "pgrep traefik"],
+                      "interval": "2s",
+                      "status": "passing"
+                    }
+                  ]
+                }
+              ]
+            }
+
+services:
+
+  # our legacy calculator application
+  calc:
+    image: python:2.7-alpine
+    command: |
+      python -c
+      "
+      import urllib2
+      from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+      class Handler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              parts = [p for p in self.path.split('/') if p]
+              op = parts[0]
+
+              if op == 'add':
+                  result = urllib2.urlopen(
+                      urllib2.Request(
+                          'http://localhost/v2/add/%s' % '/'.join(parts[1:]),
+                          headers=self.headers)
+                  ).read()
+              elif op == 'mul':
+                  result = urllib2.urlopen(
+                      urllib2.Request(
+                          'http://localhost/v2/mul/%s' % '/'.join(parts[1:]),
+                          headers=self.headers)
+                  ).read()
+              elif op == 'sub':
+                  result = int(parts[1]) - int(parts[2])
+              elif op == 'div':
+                  result = float(parts[1]) / float(parts[2])
+              else:
+                  result = 'unknown'
+
+              self.send_response(200)
+              self.end_headers()
+              self.wfile.write('%s\\n' % str(result).strip())
+
+      HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+      "
+    x-podlike:
+      templates:
+        - <<: *proxy
+        - <<: *service-discovery
+      args:
+        Proxy:
+          ServiceDiscovery:
+            Constraint: calc
+            Port: 8500
+          Tracing:
+            ServiceName: v1/calc
+          Catalog:
+            Prefix: traefik
+        ServiceDiscovery:
+          External:
+            Name: v1
+            Port: 80
+            Tags: external
+          Internal:
+            Name: local-v1-calc
+            Port: 5000
+            Tags: calc
+            Prefix: /v1
+
+  # the new service for the add operation
+  add:
+    image: python:2.7-alpine
+    command: |
+      python -c "
+      import re
+      from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+      class Handler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              result = sum(
+                  int(x) for x in self.path.split('/') if re.match('^-?[0-9]+$$', x)
+              )
+
+              self.send_response(200)
+              self.end_headers()
+              self.wfile.write('%d\\n' % result)
+
+      HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+      "
+    x-podlike:
+      templates:
+        - <<: *proxy
+        - <<: *service-discovery
+      args:
+        Proxy:
+          ServiceDiscovery:
+            Constraint: internal
+            Port: 8500
+          Tracing:
+            ServiceName: v2/add
+          Catalog:
+            Prefix: add
+        ServiceDiscovery:
+          External:
+            Name: v2/add
+            Port: 80
+            Tags: external,calc
+          Internal:
+            Name: local-v2-add
+            Port: 5000
+            Tags: internal
+            Prefix: /v2/add
+            RateLimit: true
+
+  # the new service for the multiply operation
+  mul:
+    image: python:2.7-alpine
+    command: |
+      python -c "
+      import re
+      from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+      class Handler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              result = reduce(
+                  lambda x, y: x * y, (int(x) for x in self.path.split('/') if re.match('^-?[0-9]+$$', x))
+              )
+
+              self.send_response(200)
+              self.end_headers()
+              self.wfile.write('%d\\n' % result)
+
+      HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+      "
+    x-podlike:
+      templates:
+        - <<: *proxy
+        - <<: *service-discovery
+      args:
+        Proxy:
+          ServiceDiscovery:
+            Constraint: internal
+            Port: 8500
+          Tracing:
+            ServiceName: v2/mul
+          Catalog:
+            Prefix: mul
+        ServiceDiscovery:
+          External:
+            Name: v2/mul
+            Port: 80
+            Tags: external,calc
+          Internal:
+            Name: local-v2-mul
+            Port: 5000
+            Tags: internal
+            Prefix: /v2/mul
+            RateLimit: true
+
+  # reverse proxy for external requests
+  router:
+    image: traefik
+    command: >
+      --api --api.dashboard --metrics.prometheus
+      --tracing.backend=zipkin
+      --tracing.zipkin
+      --tracing.zipkin.httpendpoint=http://zipkin:9411/api/v1/spans
+      --tracing.servicename=router
+      --consulcatalog
+      --consulcatalog.watch
+      --consulcatalog.constraints='tag==external'
+      --consulcatalog.endpoint=consul:8500
+      --consulcatalog.frontendrule='PathPrefix: /{{.ServiceName}}'
+    ports:
+      - 8080:8080
+      - 80:80
+
+  # the main Consul server
+  consul:
+    image: consul
+    environment:
+      CONSUL_BIND_INTERFACE: eth2
+    ports:
+      - 8500:8500
+
+  # request trace collector
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - 9411:9411
+    environment:
+      STORAGE_TYPE: mem
