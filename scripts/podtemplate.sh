@@ -29,7 +29,7 @@ exec_deploy() {
     do
     key="$1"
 
-    case $key in
+    case ${key} in
         -h|--help)
         print_deploy_help
         exit 0
@@ -67,8 +67,8 @@ exec_deploy() {
     # make sure the target image exist
     docker image inspect -f . rycus86/podlike:${TAG} 2>/dev/null >/dev/null || docker pull rycus86/podlike:${TAG}
 
-    # generate the YAML ouput from the templates
-    CONVERTED=$(docker run --rm -i -v $PWD:/workspace:ro -w /workspace rycus86/podlike:${TAG} template $COMPOSE_FILES 2>&1)
+    # generate the YAML output from the templates
+    CONVERTED=$(docker run --rm -i -v $PWD:/workspace:ro -w /workspace rycus86/podlike:${TAG} template ${COMPOSE_FILES} 2>&1)
     RESULT_CODE="$?"
     if [ "$RESULT_CODE" != "0" ]; then
         echo "$CONVERTED"
@@ -76,7 +76,7 @@ exec_deploy() {
     fi
 
     # do the actual stack deployment
-    cat << END_OF_STACK_YML | docker stack deploy -c - $STACK_DEPLOY_ARGS
+    cat << END_OF_STACK_YML | docker stack deploy -c - ${STACK_DEPLOY_ARGS}
 ${CONVERTED}
 END_OF_STACK_YML
 }
@@ -85,7 +85,7 @@ exec_print() {
     # make sure the target image exist
     docker image inspect -f . rycus86/podlike:${TAG} 2>/dev/null >/dev/null || docker pull rycus86/podlike:${TAG}
 
-    # generate the YAML ouput from the templates
+    # generate the YAML output from the templates
     docker run --rm -i          \
         -v $PWD:/workspace:ro   \
         -w /workspace           \

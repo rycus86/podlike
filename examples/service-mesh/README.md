@@ -28,7 +28,7 @@ $ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/s
 You can also try the templated version, once you have the `podtemplate` script [installed](https://github.com/rycus86/podlike/tree/master/scripts):
 
 ```shell
-$ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/service-mesh/stack-inline.yml | podtemplate deploy -c - mesh
+$ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/service-mesh/stack-templated.yml | podtemplate deploy -c - mesh
 ```
 
 Then try some example requests:
