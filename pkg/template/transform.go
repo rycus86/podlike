@@ -43,7 +43,7 @@ func Transform(inputFiles ...string) string {
 // The add-ons won't overwrite already existing properties, although they can
 // extend them, see `mergeRecursively` in `merge.go`.
 // The existing properties of the original service definition are also copied
-// over for most keys, see `getMergedPodKeys()` in `merge.go`, but only if
+// over for most keys, see `mergedPodKeys` in `merge.go`, but only if
 // the template didn't create them on its own.
 func executePodTemplates(tc *transformConfiguration) types.ServiceConfig {
 	definition := map[string]interface{}{}
@@ -84,7 +84,7 @@ func executePodTemplates(tc *transformConfiguration) types.ServiceConfig {
 // merged in, but they can't overwrite existing properties, see `mergeRecursively` in `merge.go`
 // The name of the main component is set to the root key of the first template.
 // The existing properties of the original service definition are copied
-// over for most keys to the component, see `getMergedTransformerKeys()` in `merge.go`,
+// over for most keys to the component, see `mergedTransformerKeys` in `merge.go`,
 // but only if the template didn't create them on its own.
 func executeTransformers(tc *transformConfiguration) (string, string) {
 	var (
