@@ -25,6 +25,12 @@ To deploy the stack straight from this repository:
 $ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/service-mesh/stack-inline.yml | docker stack deploy -c - mesh
 ```
 
+You can also try the templated version, once you have the `podtemplate` script [installed](https://github.com/rycus86/podlike/tree/master/scripts):
+
+```shell
+$ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/service-mesh/stack-inline.yml | podtemplate deploy -c - mesh
+```
+
 Then try some example requests:
 
 ```shell

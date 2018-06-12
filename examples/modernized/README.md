@@ -14,6 +14,14 @@ The easiest way to try this is:
 $ curl -fsSL https://raw.githubusercontent.com/rycus86/podlike/master/examples/modernized/install.sh | sh
 ```
 
+You can also try the templated version, once you have the `podtemplate` script [installed](https://github.com/rycus86/podlike/tree/master/scripts):
+
+```shell
+$ git clone https://github.com/rycus86/podlike.git  \
+    && cd podlike/examples/modernized               \
+    && podtemplate deploy -c stack-templated.yml modern
+```
+
 > Pro tip: try this on the [Docker Playground](https://labs.play-with-docker.com/)
 
 ## Components
