@@ -68,7 +68,7 @@ exec_deploy() {
     docker image inspect -f . rycus86/podlike:${TAG} 2>/dev/null >/dev/null || docker pull rycus86/podlike:${TAG}
 
     # generate the YAML output from the templates
-    CONVERTED=$(docker run --rm -i -v $PWD:/workspace:ro -w /workspace rycus86/podlike:${TAG} template ${COMPOSE_FILES} 2>&1)
+    CONVERTED=$(docker run --rm -i -v $PWD:/workspace:ro -w /workspace rycus86/podlike:${TAG} template ${COMPOSE_FILES})
     RESULT_CODE="$?"
     if [ "$RESULT_CODE" != "0" ]; then
         echo "$CONVERTED"
@@ -90,7 +90,7 @@ exec_print() {
         -v $PWD:/workspace:ro   \
         -w /workspace           \
         rycus86/podlike:${TAG}  \
-        template $@   2>&1
+        template $@
 }
 
 # podtemplate deploy ...

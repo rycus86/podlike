@@ -4,3 +4,5 @@ transformed:
 {{- range $key, $value := .Service.Labels }}
     modified-{{ $key }}: {{ $value }}
 {{ end }}
+
+# strip-templated

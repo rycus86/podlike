@@ -11,6 +11,14 @@ The example YAML snippet below demonstrates the use of the Podlike-related [exte
 ```yaml
 version: '3.5'
 
+x-anchors:
+
+  - &tracing-component
+    templates/components/tracing.yml
+
+  - &proxy-component
+    templates/components/proxy.yml
+
 x-podlike:
   example:
     pod:
@@ -18,16 +26,16 @@ x-podlike:
       - http: https://templates.store.local/pods/example.yml
       - inline:
           pod:
-	    labels:
-	      swarm.service.label: templated-for-{{ .Service.Name }}
+            labels:
+              swarm.service.label: templated-for-{{ .Service.Name }}
     transformer:
       - templates/transformer.yml
       # or http or inline
     templates:
       - templates/components/sidecar.yml
       - templates/components/logger.yml
-      - <<: *tracing-component
-      - <<: *proxy-component
+      - *tracing-component
+      - *proxy-component
       # or http or inline
     copy:
       - inline:
@@ -65,14 +73,6 @@ volumes:
     name: log-data-for-{{.Task.ID}}
     labels:
       com.github.rycus86.podlike.volume-ref: shared-log-folder
-
-x-anchors:
-
-  - &tracing-component
-    templates/components/tracing.yml
-
-  - &proxy-component
-    templates/components/proxy.yml
 ```
 
 Let's unpack the example above, and look at the different extension places.
@@ -127,11 +127,11 @@ x-podlike:
     pod:
       - inline: |
           image: sample/{{ .Service.Name }}:{{ .Args.ImageTag }}
-	  labels:
-	    format: string
+          labels:
+            format: string
       - inline:
           labels:
-	    given: as.mapping
+            given: as.mapping
 ```
 
 3. An HTTP(S) URL to the template
@@ -159,9 +159,9 @@ x-podlike:
     pod:
       inline:
         pod:
-	  image: forked/podlike:{{ .Args.Version }}
-	  deploy:
-	    replicas: 3
+          image: forked/podlike:{{ .Args.Version }}
+          deploy:
+            replicas: 3
     args:
       Version: 0.1.2
 ```
@@ -178,13 +178,13 @@ The `transformer` templates generate the Compose-compatible *component* definiti
 x-podlike:
   example:
     transformer:
-      inline:
+      inline: |
         main:
-	  environment:
-	    - EXTRA_VARS={{ .Args.ExtraEnv }}
-	  {{ if .Service.ReadOnly }}
+          environment:
+            - EXTRA_VARS={{ .Args.ExtraEnv }}
+          {{ if .Service.ReadOnly }}
           read_only: true
-	  {{ end }}
+          {{ end }}
     args:
       ExtraEnv: some-env-var
 ```
@@ -206,15 +206,15 @@ x-podlike:
       - templates/tracing.yml
       - inline:
           tracing:
-	    mem_limit: 64m
+            mem_limit: 64m
       - inline:
           tracing:
-	    environment:
-	      HTTP_PORT: {{ .Args.Tracing.Http.Port }}
+            environment:
+              HTTP_PORT: '{{ .Args.Tracing.Http.Port }}'
     args:
       Tracing:
         Http:
-	  Port: 12345
+          Port: 12345
 ```
 
 As with the other types, the templates are processed in the same order as they are defined in the YAML, and any common properties are merged in together. In the example above, the `templates/tracing.yml` template could define a component with the `tracing` name, then the last two templates would add in the `mem_limit` property, if not defined by the previous template already, plus the `environment` variables would also contain `HTTP_PORT`.
@@ -233,7 +233,7 @@ x-podlike:
           proxy: '/shared/proxy.conf:/var/conf/proxy/default.conf'
       - inline:
           logging:
-	    - /shared/logging.conf:/var/conf/logger/settings.properties
+            - /shared/logging.conf:/var/conf/logger/settings.properties
             - /shared/proxy.logging:/var/conf/logger/conf.d/proxy.conf
 ```
 
@@ -249,19 +249,19 @@ x-podlike:
     transformer:
       - inline:
           environment:
-	    - HTTP_PROXY=my.local.proxy:8091
-	  labels:
-	    inline.label: sample
+            - HTTP_PROXY=my.local.proxy:8091
+          labels:
+            inline.label: sample
       - inline:
           environment:
-	    ADDED: 'new key, and is added'
-	    HTTP_PROXY: 'ignored as already defined'
+            ADDED: 'new key, and is added'
+            HTTP_PROXY: 'ignored as already defined'
             # note that `- HTTP_PROXY=override` would have been added
             # because at this point the template engine wouldn't assume it's
             # a key-value pair as a string, only when it sees that it can be a mapping
-	  labels:
-	    inline.label:      ignored
-	    additional.label:  added
+          labels:
+            inline.label:      ignored
+            additional.label:  added
 ```
 
 The merging logic works on a best-effort basis to merge items of the same property together, even if they are of different types. It can:
@@ -278,7 +278,7 @@ See the implementation in the [merge.go](https://github.com/rycus86/podlike/blob
 
 Besides top-level extension fields, the template engine also supports per-service extensions with the same `x-podlike` name. This currently works by removing the property and its children from the YAML after reading the configuration from them.
 
-> With Compose schema version `3.7`, the service-level extension fields are going to be [supported](TODO) as well, but until then having these makes the YAML invalid for a plain `docker stack deploy` command.
+> With Compose schema version `3.7`, the service-level extension fields are going to be [supported](https://github.com/docker/cli/pull/1097) as well, but until then having these makes the YAML invalid for a plain `docker stack deploy` command.
 
 The configuration is the same as it is for the top-level field, with the exception that the service name does not have to be defined as it is inferred from the service name.
 
@@ -307,7 +307,7 @@ services:
     x-podlike:
       templates:
         - templates/first.yml
-	- templates/second.yml
+        - templates/second.yml
 
 x-podlike:
   example:
@@ -335,7 +335,7 @@ x-podlike-templates:  # the name of this does not matter
     pod:
       inline:
         image: forked/podlike
-	command: -logs -pids=false
+        command: -logs -pids=false
 
   - &sidecar-template
     inline:
@@ -346,7 +346,7 @@ x-podlike-templates:  # the name of this does not matter
     inline:
       logging:
         image: sample/logger
-	command: -input {{ .Args.LogFile }}
+        command: -input {{ .Args.LogFile }}
 
 services:
  
@@ -356,7 +356,7 @@ services:
       <<: *default-pod
       templates:
         - <<: *sidecar-template
-	- <<: *logging-template
+        - <<: *logging-template
       args:
         LogFile: /var/logs/service.one.log
 
@@ -365,7 +365,7 @@ services:
     x-podlike:
       <<: *default-pod
       templates:
-	- <<: *logging-template
+        - <<: *logging-template
       args:
         LogFile: /var/logs/service.two.log
 ```
@@ -376,15 +376,15 @@ This is particularly useful when using inline templates. A better approach would
 
 When rendering the templates, the following variables are available to them:
 
-- `Service`: the Swarm service definition as the [Docker cli package](TODO github.com/docker/cli/cli/compose/types/types.go) defines it
+- `Service`: the Swarm service definition as the [Docker cli package](https://github.com/docker/cli/blob/master/cli/compose/types/types.go) has it
 - `Args`: the merged *map* of the service arguments, with the global `args` added in as described above
 
-There are also additional template functions available, on top of the [built-in ones](TODO):
+There are also additional template functions available, on top of the [built-in ones](https://golang.org/pkg/text/template/#hdr-Functions):
 
 - `yaml <obj>`: returns the YAML string representation of an object
 - `indent <num> <str>`: indents every line of `<str>` by `<num>` spaces
 - `empty <obj>`: returns *true* if the array/slice/map is empty
-- `nonEmpty <obj>`: returns *true* if the array/slice/map is not empty
+- `notEmpty <obj>`: returns *true* if the array/slice/map is not empty
 - `contains <s> <t>`: returns *true* if `<t>` contains `<s>`
 - `startsWith <s> <t>`: return *true* if `<t>` starts with `<s>`
 - `replace <old> <new> <n> <s>`: replaces `<old>` with `<new>` `<n>` times in `<s>`
@@ -411,10 +411,97 @@ sidecar:
 {{ end }}
 ```
 
-> TODO example input stack + result
+If given an input like this:
+
+```yaml
+version: '3.5'
+services:
+
+  app:
+    image: sample/app:1.1.0
+    ports:
+      - 9090:3000
+      - 15000:8080
+    labels:
+      com.xyz.label: value
+      sidecar.metrics.port: 15000
+      sidecar.ping.endpoint: /v2/ping
+    x-podlike:
+      pod:
+        inline:
+          pod:
+            labels:  # avoid copying labels from the service
+      transformer:
+        inline:
+          app:
+            labels:
+              com.xyz.system: sample-app
+      templates:
+        - templates/sidecar/v1.yml
+      args:
+        Sidecar:
+          Current:
+            Image: scapp
+            Version: 3.4.2
+```
+
+The generated result would look like this:
+
+```yaml
+version: "3.5"
+services:
+  app:
+    image: rycus86/podlike:latest
+    labels:
+      pod.component.app: |
+        image: sample/app:1.1.0
+        labels:
+          com.xyz.system: sample-app
+      pod.component.sidecar: |
+        command:
+        - --listen
+        - "3000"
+        image: sidecars/scapp:3.4.2
+        labels:
+          metrics.port: "15000"
+          ping.endpoint: /v2/ping
+    ports:
+    - mode: ingress
+      target: 3000
+      published: 9090
+      protocol: tcp
+    - mode: ingress
+      target: 8080
+      published: 15000
+      protocol: tcp
+    volumes:
+    - type: bind
+      source: /var/run/docker.sock
+      target: /var/run/docker.sock
+      read_only: true
+networks: {}
+volumes: {}
+secrets: {}
+configs: {}
+```
 
 ## Usage
 
-> TODO with docker
-> TODO with the script
+The template engine is part of the main application, so it can easily be invoked through Docker:
 
+```shell
+$ docker run --rm -it                \
+        -v $PWD:/workspace:ro        \
+        -w /workspace                \
+        rycus86/podlike              \
+        template <file> [<file>...]
+```
+
+This shares the current directory (and its sub-directories) and generates the final YAML using the given input stack YAML files. Alternatively, you can pipe the source stack to the standard input of the container, if you only use inline templates:
+
+```shell
+$ cat source.yml | docker run --rm -i rycus86/podlike template -
+# notice the missing --tty option
+```
+
+To make these easier, there is a script to do this for you, called `podtemplate`. Have a look into its [documentation](https://github.com/rycus86/podlike/tree/master/scripts) for installation and usage information.

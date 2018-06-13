@@ -1,15 +1,16 @@
 package template
 
 import (
+	"fmt"
 	"strings"
 )
 
 func PrintTemplatedStack(parameters ...string) {
 	if len(parameters) == 0 || parameters[0] == "-h" || parameters[0] == "--help" {
-		println(help())
+		fmt.Println(help())
 
 	} else {
-		println(Transform(parameters...))
+		fmt.Println(Transform(parameters...))
 
 	}
 }

@@ -13,8 +13,3 @@ services:
 x-podlike:
   example:
     pod: templates/simple/pod.yml
-#    transformer: templates/simple/transformer.yml
-#    templates:
-#      - templates/simple/templates.yml
-#    copy:
-#      - templates/simple/copies.yml

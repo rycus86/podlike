@@ -12,9 +12,5 @@ services:
 
 x-podlike:
   simple:
-#    pod: template/simple/pod.yml
-#    transformer: templates/simple/transformer.yml
     templates:
       - templates/simple/templates.yml
-#    copy:
-#      - templates/simple/copies.yml

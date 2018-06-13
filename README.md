@@ -122,6 +122,48 @@ The properties of each component are the same ones a Compose project would accep
 
 To make this more convenient, you can specify a Compose file to configure the components from, using the `pod.compose.file` label, which needs to point to a file inside the controller container. This will ignore any properties the app doesn't support, like ports, networking configuration, etc. (see below). This means, if you have a working Compose project, you're likely to be able to use it to feed the app, even without dropping the unsupported properties. You may still want to change things to work better as a group though.
 
+## Templates
+
+To help reducing duplication in the stack YAML files, and to be able to share *"pod"* configuration between stack, you can use [templates](https://github.com/rycus86/podlike/blob/master/docs/Templates.md). These rely on extension fields in the stack's Compose file to set up the controller and the components in a more convenient way.
+
+```yaml
+version: '3.5'
+
+x-podlike-templates:
+  - &component-template
+    inline:
+      main:
+        labels:
+          place: component
+          svc.name: 'svc_{{ .Service.Name }}'
+
+  - &sidecar-template
+    inline:
+      sidecar:
+        image: sample/sidecar
+        command: --port 8080
+
+services:
+
+  inline:
+    image: sample/inline
+    command: -exec
+    x-podlike:
+      pod:
+        inline: |
+          controller:
+            image: rycus86/podlike:test
+            command: -logs -pids
+            labels:
+              place: controller
+      transformer:
+        <<: *component-template
+      templates:
+        - <<: *sidecar-template
+```
+
+Have a look at the [documentation](https://github.com/rycus86/podlike/blob/master/docs/Templates.md) to see what you can do with templates, then check out the [podtemplate](https://github.com/rycus86/podlike/tree/master/scripts) wrapper script that helps you automating the generation of templated stacks - or even deploying them in a single step.
+
 ## Volumes
 
 To share the controller's volumes with the components, the ones Swarm attached to the task, you have two options:

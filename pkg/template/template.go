@@ -44,15 +44,7 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 		name = path.Base(t.Template)
 	}
 
-	tmpl := template.New(name).Funcs(template.FuncMap{
-		"yaml":       yamlFunc,
-		"indent":     indentFunc,
-		"empty":      emptyFunc,
-		"notEmpty":   notEmptyFunc,
-		"contains":   containsFunc,
-		"replace":    replaceFunc,
-		"startsWith": startsWithFunc,
-	})
+	tmpl := template.New(name).Funcs(podTemplateFuncMap)
 
 	var err error
 

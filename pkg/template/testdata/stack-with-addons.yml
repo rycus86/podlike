@@ -13,5 +13,3 @@ services:
       templates:
         - templates/addons/template-sidecar.yml
         - templates/addons/addon-sidecar-metrics.yml
-#      copy:
-#        - templates/simple/copies.yml

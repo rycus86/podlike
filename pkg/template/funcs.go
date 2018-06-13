@@ -4,7 +4,18 @@ import (
 	"gopkg.in/yaml.v2"
 	"reflect"
 	"strings"
+	"text/template"
 )
+
+var podTemplateFuncMap = template.FuncMap{
+	"yaml":       yamlFunc,
+	"indent":     indentFunc,
+	"empty":      emptyFunc,
+	"notEmpty":   notEmptyFunc,
+	"contains":   containsFunc,
+	"replace":    replaceFunc,
+	"startsWith": startsWithFunc,
+}
 
 func yamlFunc(v interface{}) (string, error) {
 	if contents, err := yaml.Marshal(v); err != nil {

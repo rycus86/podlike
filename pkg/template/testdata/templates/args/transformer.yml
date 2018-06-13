@@ -6,3 +6,5 @@ app:
 {{- range $idx, $item := .Args.Key4 }}
     key4-{{ $idx }}: str-{{ $item }}
 {{ end }}
+
+# strip-templated
