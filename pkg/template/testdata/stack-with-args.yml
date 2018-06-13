@@ -11,8 +11,12 @@ services:
           Item: 42
 
 x-podlike:
+  with-args:
+    args:
+      Key1: ignored-sl
+      Key3: top-level
   args:
-    Key1: ignored
-    Key3: 
+    Key1: ignored-tl
+    Key4: 
       - global
 

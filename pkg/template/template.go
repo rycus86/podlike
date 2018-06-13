@@ -20,7 +20,6 @@ func (t *podTemplate) render(tc *transformConfiguration) map[string]interface{} 
 
 	if err := t.prepareTemplate(tc.Session.WorkingDir).Execute(buffer, templateVars{
 		Service: tc.Service,
-		Project: tc.Session.Project,
 		Args:    allArgs,
 	}); err != nil {
 		panic(err)
@@ -46,10 +45,13 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 	}
 
 	tmpl := template.New(name).Funcs(template.FuncMap{
-		"yaml":     yamlFunc,
-		"indent":   indentFunc,
-		"empty":    emptyFunc,
-		"notEmpty": notEmptyFunc,
+		"yaml":       yamlFunc,
+		"indent":     indentFunc,
+		"empty":      emptyFunc,
+		"notEmpty":   notEmptyFunc,
+		"contains":   containsFunc,
+		"replace":    replaceFunc,
+		"startsWith": startsWithFunc,
 	})
 
 	var err error

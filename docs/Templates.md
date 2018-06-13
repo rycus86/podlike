@@ -16,7 +16,7 @@ x-podlike:
     pod:
       - templates/pod.yml
       - http: https://templates.store.local/pods/example.yml
-      - inline: |
+      - inline:
           pod:
 	    labels:
 	      swarm.service.label: templated-for-{{ .Service.Name }}
@@ -30,7 +30,7 @@ x-podlike:
       - <<: *proxy-component
       # or http or inline
     copy:
-      - inline: |
+      - inline:
           sidecar: /var/conf/sidecar.conf:/etc/sidecar/conf.d/default.conf
       # or http or from file
     args:
@@ -119,7 +119,7 @@ x-podlike:
 
 2. An inline template mapping
 
-This uses the given string as the template text.
+This uses the given string as the template text, or the YAML string marshalled from the given mapping.
 
 ```yaml
 x-podlike:
@@ -127,6 +127,11 @@ x-podlike:
     pod:
       - inline: |
           image: sample/{{ .Service.Name }}:{{ .Args.ImageTag }}
+	  labels:
+	    format: string
+      - inline:
+          labels:
+	    given: as.mapping
 ```
 
 3. An HTTP(S) URL to the template
@@ -152,7 +157,7 @@ If there is at least one template given, the template engine only makes sure the
 x-podlike:
   example:
     pod:
-      inline: |
+      inline:
         pod:
 	  image: forked/podlike:{{ .Args.Version }}
 	  deploy:
@@ -173,7 +178,7 @@ The `transformer` templates generate the Compose-compatible *component* definiti
 x-podlike:
   example:
     transformer:
-      inline: |
+      inline:
         main:
 	  environment:
 	    - EXTRA_VARS={{ .Args.ExtraEnv }}
@@ -199,10 +204,10 @@ x-podlike:
       - templates/sidecar.yml
       - templates/service-discovery.yml
       - templates/tracing.yml
-      - inline: |
+      - inline:
           tracing:
 	    mem_limit: 64m
-      - inline: |
+      - inline:
           tracing:
 	    environment:
 	      HTTP_PORT: {{ .Args.Tracing.Http.Port }}
@@ -224,9 +229,9 @@ Podlike allows copying files from the *controller* container into the *component
 x-podlike:
   example:
     copy:
-      - inline: |
+      - inline:
           proxy: '/shared/proxy.conf:/var/conf/proxy/default.conf'
-      - inline: |
+      - inline:
           logging:
 	    - /shared/logging.conf:/var/conf/logger/settings.properties
             - /shared/proxy.logging:/var/conf/logger/conf.d/proxy.conf
@@ -242,12 +247,12 @@ As mentioned above, each type of templates can use multiple source to generate t
 x-podlike:
   example:
     transformer:
-      - inline: |
+      - inline:
           environment:
 	    - HTTP_PROXY=my.local.proxy:8091
 	  labels:
 	    inline.label: sample
-      - inline: |
+      - inline:
           environment:
 	    ADDED: 'new key, and is added'
 	    HTTP_PROXY: 'ignored as already defined'
@@ -271,15 +276,142 @@ See the implementation in the [merge.go](https://github.com/rycus86/podlike/blob
 
 ## Service-level extension
 
-> TODO
+Besides top-level extension fields, the template engine also supports per-service extensions with the same `x-podlike` name. This currently works by removing the property and its children from the YAML after reading the configuration from them.
+
+> With Compose schema version `3.7`, the service-level extension fields are going to be [supported](TODO) as well, but until then having these makes the YAML invalid for a plain `docker stack deploy` command.
+
+The configuration is the same as it is for the top-level field, with the exception that the service name does not have to be defined as it is inferred from the service name.
+
+```yaml
+version: '3.5'
+services:
+  
+  example:
+    image: sample/application
+    x-podlike:
+      pod:
+      transformer:
+      templates:
+      copy:
+      args:
+```
+
+If the same service has any configuration in the top-level `x-podlike` field as well, then those are merged into the service-level configuration following the rules above. For example:
+
+```yaml
+version: '3.5'
+services:
+  
+  example:
+    image: sample/application
+    x-podlike:
+      templates:
+        - templates/first.yml
+	- templates/second.yml
+
+x-podlike:
+  example:
+    templates:
+      - templates/third.yml
+```
+
+The `args` are also merged the same way, in the order of:
+
+1. Service-level arguments
+2. Per-service arguments from the top-level extension
+3. Global arguments from the top-level extension
+
+This allows you to define default values for arguments globally, then override then per service.
 
 ## Using YAML anchors
 
-> TODO
+If multiple services in a single stack share similar templating configuration, YAML anchors could help reduce some of the duplication. For example:
 
-## Template variables
+```yaml
+version: '3.5'
 
-> TODO
+x-podlike-templates:  # the name of this does not matter
+  - &default-pod
+    pod:
+      inline:
+        image: forked/podlike
+	command: -logs -pids=false
+
+  - &sidecar-template
+    inline:
+      sidecar:
+        image: sample/sidecar
+
+  - &logging-template
+    inline:
+      logging:
+        image: sample/logger
+	command: -input {{ .Args.LogFile }}
+
+services:
+ 
+  service-one:
+    image: sample/svc1
+    x-podlike:
+      <<: *default-pod
+      templates:
+        - <<: *sidecar-template
+	- <<: *logging-template
+      args:
+        LogFile: /var/logs/service.one.log
+
+  service-two:
+    image: sample/svc2
+    x-podlike:
+      <<: *default-pod
+      templates:
+	- <<: *logging-template
+      args:
+        LogFile: /var/logs/service.two.log
+```
+
+This is particularly useful when using inline templates. A better approach would be sharing the templates through files, or serving them up on HTTP.
+
+## Template variables and functions
+
+When rendering the templates, the following variables are available to them:
+
+- `Service`: the Swarm service definition as the [Docker cli package](TODO github.com/docker/cli/cli/compose/types/types.go) defines it
+- `Args`: the merged *map* of the service arguments, with the global `args` added in as described above
+
+There are also additional template functions available, on top of the [built-in ones](TODO):
+
+- `yaml <obj>`: returns the YAML string representation of an object
+- `indent <num> <str>`: indents every line of `<str>` by `<num>` spaces
+- `empty <obj>`: returns *true* if the array/slice/map is empty
+- `nonEmpty <obj>`: returns *true* if the array/slice/map is not empty
+- `contains <s> <t>`: returns *true* if `<t>` contains `<s>`
+- `startsWith <s> <t>`: return *true* if `<t>` starts with `<s>`
+- `replace <old> <new> <n> <s>`: replaces `<old>` with `<new>` `<n>` times in `<s>`
+
+An example template using them could look like this:
+
+```
+sidecar:
+  image: sidecars/{{ .Args.Sidecar.Current.Image }}:{{ .Args.Sidecar.Current.Version }}
+{{ if notEmpty .Service.Ports }}
+  {{ with $port := index .Service.Ports 0 }}
+  command: --listen {{ $port.Target }}
+  {{ end }}
+{{ else }}
+  command: --listen 8080
+{{ end }}
+  labels:
+{{ range $key, $value := .Service.Labels }}
+  {{ if $key | startsWith "sidecar." }}
+    {{ with $label := $key | replace "sidecar." "" -1 }}
+{{ printf "%s: %s" $label $value | indent 4 }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+```
+
+> TODO example input stack + result
 
 ## Usage
 

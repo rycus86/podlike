@@ -2,14 +2,14 @@ version: '3.5'
 
 x-podlike-templates:
   - &component-template
-    inline: |
+    inline:
       main:
         labels:
           place: component
           svc.name: 'svc_{{ .Service.Name }}'
 
   - &sidecar-template
-    inline: |
+    inline:
       sidecar:
         image: sample/sidecar
         command: --port 8080

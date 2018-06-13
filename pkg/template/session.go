@@ -11,47 +11,8 @@ import (
 
 func (ts *transformSession) prepareConfiguration() {
 	for _, configFile := range ts.ConfigFiles {
-		ts.collectTopLevelConfigurations(configFile)
 		ts.collectServiceLevelConfigurations(configFile)
-	}
-}
-
-func (ts *transformSession) collectTopLevelConfigurations(configFile types.ConfigFile) {
-	if configSection, ok := configFile.Config[XPodlikeExtension]; ok {
-		globalConfig, ok := configSection.(map[string]interface{})
-		if !ok {
-			panic("top level x-podlike config is not a mapping")
-		}
-
-		// extract the top level global arguments first
-		if args, ok := globalConfig[ArgsProperty]; ok {
-			if mArgs, ok := args.(map[string]interface{}); ok {
-				mergeRecursively(ts.Args, mArgs)
-				delete(globalConfig, ArgsProperty)
-			} else {
-				panic("template args is not a mapping")
-			}
-		}
-
-		// parse the rest of the configuration as {service -> config} map
-		var configs map[string]transformConfiguration
-
-		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			Result:     &configs,
-			DecodeHook: podTemplateHookFunc(),
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		err = decoder.Decode(configSection)
-		if err != nil {
-			panic(err)
-		}
-
-		for serviceName, config := range configs {
-			ts.registerService(serviceName, config)
-		}
+		ts.collectTopLevelConfigurations(configFile)
 	}
 }
 
@@ -101,6 +62,45 @@ func (ts *transformSession) collectServiceLevelConfigurations(configFile types.C
 	}
 }
 
+func (ts *transformSession) collectTopLevelConfigurations(configFile types.ConfigFile) {
+	if configSection, ok := configFile.Config[XPodlikeExtension]; ok {
+		globalConfig, ok := configSection.(map[string]interface{})
+		if !ok {
+			panic("top level x-podlike config is not a mapping")
+		}
+
+		// extract the top level global arguments first
+		if args, ok := globalConfig[ArgsProperty]; ok {
+			if mArgs, ok := args.(map[string]interface{}); ok {
+				mergeRecursively(ts.Args, mArgs)
+				delete(globalConfig, ArgsProperty)
+			} else {
+				panic("template args is not a mapping")
+			}
+		}
+
+		// parse the rest of the configuration as {service -> config} map
+		var configs map[string]transformConfiguration
+
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			Result:     &configs,
+			DecodeHook: podTemplateHookFunc(),
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		err = decoder.Decode(configSection)
+		if err != nil {
+			panic(err)
+		}
+
+		for serviceName, config := range configs {
+			ts.registerService(serviceName, config)
+		}
+	}
+}
+
 func (ts *transformSession) registerService(name string, config transformConfiguration) {
 	if existing, ok := ts.Configurations[name]; ok {
 		for _, pod := range config.Pod {
@@ -118,6 +118,8 @@ func (ts *transformSession) registerService(name string, config transformConfigu
 		for _, cp := range config.Copy {
 			existing.Copy = append(existing.Copy, cp)
 		}
+
+		mergeRecursively(existing.Args, config.Args)
 
 		return
 	}

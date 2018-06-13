@@ -2,6 +2,7 @@ package template
 
 import (
 	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v2"
 	"reflect"
 )
 
@@ -32,6 +33,15 @@ func podTemplateHookFunc() mapstructure.DecodeHookFunc {
 			item := reflect.ValueOf(data).Interface()
 			if m, ok := item.(map[string]interface{}); ok {
 				if inline, ok := m[TypeInline]; ok {
+
+					// convert an inline mapping into a YAML string
+					if inlineMap, ok := inline.(map[string]interface{}); ok {
+						if content, err := yaml.Marshal(inlineMap); err != nil {
+							return nil, err
+						} else {
+							inline = string(content)
+						}
+					}
 
 					if t == reflect.TypeOf(podTemplate{}) {
 						return podTemplate{Template: inline.(string), Inline: true}, nil

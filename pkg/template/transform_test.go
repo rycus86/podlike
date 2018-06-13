@@ -174,7 +174,10 @@ func TestTransform_WithArgs(t *testing.T) {
 			return hasLabel("key2", "42", c.Labels)
 		},
 		func(c *component.Component, s *types.ServiceConfig) bool {
-			return hasLabel("key3-0", "str-global", c.Labels)
+			return hasLabel("key3", "top-level", c.Labels)
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return hasLabel("key4-0", "str-global", c.Labels)
 		})
 }
 
