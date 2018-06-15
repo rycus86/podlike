@@ -100,8 +100,9 @@ component:
 	defer server.Close()
 
 	tmpl := podTemplate{
-		Template: server.URL + "/template/testing",
-		Http:     true,
+		Http: &httpTemplate{
+			URL: server.URL + "/template/testing",
+		},
 	}
 
 	rendered := tmpl.render(&transformConfiguration{
@@ -123,6 +124,76 @@ component:
 	} else if image, ok := mComp["image"]; !ok {
 		t.Error("Image key not found")
 	} else if image != "sample/testing:0.1.2" {
+		t.Error("Invalid image value found")
+	}
+}
+
+func TestRender_HttpWithSelfSignedCert(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.RequestURI != "/template/testing/tls" {
+			t.Fatal("Invalid template request")
+		}
+
+		w.WriteHeader(200)
+		w.Write([]byte(`
+proxy:
+  image: sample/proxy
+  command: serve --8080
+`))
+	}))
+	defer server.Close()
+
+	tmpl := podTemplate{
+		Http: &httpTemplate{
+			URL:      server.URL + "/template/testing/tls",
+			Insecure: true,
+		},
+	}
+
+	rendered := tmpl.render(&transformConfiguration{
+		Service: &types.ServiceConfig{},
+		Args:    map[string]interface{}{},
+		Session: &transformSession{},
+	})
+
+	if comp, ok := rendered["proxy"]; !ok {
+		t.Error("Root key not found")
+	} else if mComp, ok := comp.(map[string]interface{}); !ok {
+		t.Error("Invalid root key")
+	} else if image, ok := mComp["image"]; !ok {
+		t.Error("Image key not found")
+	} else if image != "sample/proxy" {
+		t.Error("Invalid image value found")
+	}
+}
+
+func TestRender_HttpWithFallback(t *testing.T) {
+	tmpl := podTemplate{
+		Http: &httpTemplate{
+			URL: "http://127.0.0.1:65001/not/found",
+			Fallback: &podTemplate{
+				Template: `
+component:
+  image: sample/http:fallback
+`,
+				Inline: true,
+			},
+		},
+	}
+
+	rendered := tmpl.render(&transformConfiguration{
+		Service: &types.ServiceConfig{},
+		Args:    map[string]interface{}{},
+		Session: &transformSession{},
+	})
+
+	if comp, ok := rendered["component"]; !ok {
+		t.Error("Root key not found")
+	} else if mComp, ok := comp.(map[string]interface{}); !ok {
+		t.Error("Invalid root key")
+	} else if image, ok := mComp["image"]; !ok {
+		t.Error("Image key not found")
+	} else if image != "sample/http:fallback" {
 		t.Error("Invalid image value found")
 	}
 }

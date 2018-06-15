@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"crypto/tls"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
@@ -40,7 +41,7 @@ func (t *podTemplate) render(tc *transformConfiguration) map[string]interface{} 
 
 func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 	name := TypeInline
-	if !t.Inline && !t.Http {
+	if !t.Inline && t.Http == nil {
 		name = path.Base(t.Template)
 	}
 
@@ -48,13 +49,41 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 
 	var err error
 
-	if t.Http {
-		if resp, err := http.Get(t.Template); err == nil && resp.StatusCode == 200 {
+	if t.Http != nil {
+		var resp *http.Response
+
+		if t.Http.Insecure {
+			transport := http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			}
+			defer transport.CloseIdleConnections()
+
+			cli := http.Client{
+				Transport: &transport,
+			}
+
+			resp, err = cli.Get(t.Http.URL)
+
+		} else {
+			resp, err = http.Get(t.Http.URL)
+
+		}
+
+		if err == nil && resp.StatusCode == 200 {
 			defer resp.Body.Close()
 
 			if content, err := ioutil.ReadAll(resp.Body); err == nil {
 				tmpl, err = tmpl.Parse(string(content))
 			}
+
+		} else if t.Http.Fallback != nil {
+			return t.Http.Fallback.prepareTemplate(workingDir)
+
+		} else {
+			panic(err)
+
 		}
 
 	} else if t.Inline {

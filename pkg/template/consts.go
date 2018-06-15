@@ -7,4 +7,8 @@ const (
 
 	TypeInline = "inline"
 	TypeHttp   = "http"
+
+	PropURL      = "url"
+	PropInsecure = "insecure"
+	PropFallback = "fallback"
 )
