@@ -1,0 +1,25 @@
+version: '3.5'
+services:
+
+  dep:
+    image: sample/inline
+    x-podlike:
+      templates:
+
+        - inline:
+            first:
+              image: sample/first
+
+        - inline:
+            second:
+              image: sample/second
+              depends_on:
+                first:
+                  condition: service_healthy
+
+        - inline:
+            third:
+              image: sample/third
+              depends_on:
+                - first
+                - second

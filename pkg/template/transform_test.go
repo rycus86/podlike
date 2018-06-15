@@ -230,6 +230,39 @@ func TestTransform_Copy(t *testing.T) {
 		})
 }
 
+func TestTransform_WithDependencies(t *testing.T) {
+	output := Transform("testdata/stack-with-dependencies.yml")
+	verifyTemplatedComponent(t, output, "dep", "first",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/first"
+		})
+	verifyTemplatedComponent(t, output, "dep", "second",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/second"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			if deps, err := c.GetDependencies(); err != nil {
+				return false
+			} else {
+				return len(deps) == 1 &&
+					deps[0].Name == "first" && deps[0].NeedsHealthyState == true
+			}
+		})
+	verifyTemplatedComponent(t, output, "dep", "third",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/third"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			if deps, err := c.GetDependencies(); err != nil {
+				return false
+			} else {
+				return len(deps) == 2 &&
+					deps[0].Name == "first" && deps[0].NeedsHealthyState == false &&
+					deps[1].Name == "second" && deps[1].NeedsHealthyState == false
+			}
+		})
+}
+
 func TestTransform_CustomController(t *testing.T) {
 	nonDefaultImage = true
 	defer func() {

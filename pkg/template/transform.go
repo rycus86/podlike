@@ -109,12 +109,19 @@ func executeTransformers(tc *transformConfiguration) (string, string) {
 
 	mergeServiceProperties(definition, tc.getServiceConfig(), mergedTransformerKeys)
 
+	// we need to remove depends_on here, the Compose v2 compatible format won't parse for the v3 service type
+	servicesWithDependsOn := extractDependsOnConfig(definition)
+
 	converted := convertToServices(definition, tc.Session.WorkingDir)
 	if len(converted) != 1 {
 		panic(fmt.Sprintf("somehow we ended up with %d definitions for the main component", len(converted)))
 	}
 
 	comp := convertToYaml(converted[0])
+
+	// add back the removed depends_on
+	comp = insertDependsOnConfig(comp, servicesWithDependsOn, converted[0].Name)
+
 	return converted[0].Name, comp
 }
 
@@ -132,8 +139,16 @@ func executeTemplates(tc *transformConfiguration) map[string]string {
 		mergeRecursively(definition, tmpl.render(tc))
 	}
 
+	// we need to remove depends_on here, the Compose v2 compatible format won't parse for the v3 service type
+	servicesWithDependsOn := extractDependsOnConfig(definition)
+
 	for _, comp := range convertToServices(definition, tc.Session.WorkingDir) {
-		components[comp.Name] = convertToYaml(comp)
+		rendered := convertToYaml(comp)
+
+		// add back the removed depends_on
+		rendered = insertDependsOnConfig(rendered, servicesWithDependsOn, comp.Name)
+
+		components[comp.Name] = rendered
 	}
 
 	return components
