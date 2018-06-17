@@ -78,11 +78,11 @@ func hookFromInlineConfig(t reflect.Type, inline interface{}) (interface{}, erro
 	}
 
 	if t == reflect.TypeOf(podTemplate{}) {
-		return podTemplate{Template: inline.(string), Inline: true}, nil
+		return podTemplate{Inline: inline.(string)}, nil
 
 	} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
 		return []podTemplate{
-			{Template: inline.(string), Inline: true},
+			{Inline: inline.(string)},
 		}, nil
 	}
 

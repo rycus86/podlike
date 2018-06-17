@@ -16,14 +16,13 @@ func getMinimalPodProperties(name string) map[string]interface{} {
 
 func getDefaultPodTemplate() podTemplate {
 	return podTemplate{
-		Template: fmt.Sprintf(`
+		Inline: fmt.Sprintf(`
 pod:
   image:   rycus86/podlike:%s
   command: -logs
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
 `, getTagForPod()),
-		Inline: true,
 	}
 }
 
@@ -39,9 +38,8 @@ func getTagForPod() string {
 
 func getDefaultTransformerTemplate() podTemplate {
 	return podTemplate{
-		Template: `
+		Inline: `
 app:
   image: {{ .Service.Image }}`,
-		Inline: true,
 	}
 }

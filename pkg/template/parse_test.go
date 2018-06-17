@@ -2,6 +2,7 @@ package template
 
 import (
 	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -64,14 +65,39 @@ x-podlike:
 				c.Templates[0].Http.URL == "http://with.fallback" &&
 				c.Templates[0].Http.Insecure == false &&
 				c.Templates[0].Http.Fallback != nil &&
-				c.Templates[0].Http.Fallback.Inline &&
-				c.Templates[0].Http.Fallback.Template == "InlineTemplate" &&
+				c.Templates[0].Http.Fallback.Inline == "InlineTemplate" &&
 
 				c.Templates[1].Http.URL == "https://insecure.fallback" &&
 				c.Templates[1].Http.Insecure == true &&
 				c.Templates[1].Http.Fallback != nil &&
-				c.Templates[1].Http.Fallback.Inline == false &&
+				c.Templates[1].Http.Fallback.Inline == "" &&
 				c.Templates[1].Http.Fallback.Template == "from/file.yml"
+		}))
+}
+
+func TestParse_Inline(t *testing.T) {
+	verifyParseResults(t, `
+version: '3.5'
+services:
+  test:
+    image: test/validate
+
+x-podlike:
+  test:
+    transformer:
+      inline:
+        main:
+          image: sample/transformer
+    templates:
+      - inline: |
+          extra:
+            image: sample/templated
+`,
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Transformer) == 1 && strings.Contains(c.Transformer[0].Inline, "image: sample/transformer")
+		}),
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Templates) == 1 && strings.Contains(c.Templates[0].Inline, "image: sample/templated")
 		}))
 }
 

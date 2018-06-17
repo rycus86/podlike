@@ -55,11 +55,10 @@ component:
 
 func TestRender_Inline(t *testing.T) {
 	tmpl := podTemplate{
-		Template: `
+		Inline: `
 component:
   image: sample/{{ .Service.Labels.CompName }}:{{ .Args.TargetTag }}
 `,
-		Inline: true,
 	}
 
 	rendered := tmpl.render(&transformConfiguration{
@@ -172,11 +171,10 @@ func TestRender_HttpWithFallback(t *testing.T) {
 		Http: &httpTemplate{
 			URL: "http://127.0.0.1:65001/not/found",
 			Fallback: &podTemplate{
-				Template: `
+				Inline: `
 component:
   image: sample/http:fallback
 `,
-				Inline: true,
 			},
 		},
 	}
@@ -200,7 +198,7 @@ component:
 
 func TestRender_WithFuncs(t *testing.T) {
 	tmpl := podTemplate{
-		Template: `
+		Inline: `
 sidecar:
   image: sidecars/{{ .Args.Sidecar.Current.Image }}:{{ .Args.Sidecar.Current.Version }}
 {{ if notEmpty .Service.Ports }}
@@ -219,7 +217,6 @@ sidecar:
   {{ end }}
 {{ end }}
 `,
-		Inline: true,
 	}
 
 	rendered := tmpl.render(&transformConfiguration{
