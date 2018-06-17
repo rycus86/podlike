@@ -68,7 +68,10 @@ func hookStringToPodTemplate(source string) podTemplate {
 func hookFromMap(t reflect.Type, data interface{}) (interface{}, error) {
 	item := reflect.ValueOf(data).Interface()
 	if m, ok := item.(map[string]interface{}); ok {
-		if inline, ok := m[TypeInline]; ok {
+		if file, ok := m[TypeFile]; ok {
+			return hookFromFileConfig(t, file)
+
+		} else if inline, ok := m[TypeInline]; ok {
 			return hookFromInlineConfig(t, inline)
 
 		} else if httpSource, ok := m[TypeHttp]; ok {
@@ -78,6 +81,39 @@ func hookFromMap(t reflect.Type, data interface{}) (interface{}, error) {
 	}
 
 	return data, nil
+}
+
+func hookFromFileConfig(t reflect.Type, source interface{}) (interface{}, error) {
+	var (
+		path     string
+		fallback *podTemplate
+	)
+
+	if s, ok := source.(string); ok {
+		path = s
+
+	} else if config, ok := source.(map[string]interface{}); ok {
+		if p, ok := config[PropPath]; !ok {
+			return nil, errors.New(fmt.Sprintf("missing `path` property on %+v", config))
+		} else if src, ok := p.(string); !ok {
+			return nil, errors.New(fmt.Sprintf("invalid `path` type %T on %+v", p, config))
+		} else {
+			path = src
+		}
+
+		if f, err := hookDecodeFallback(config); err != nil {
+			return nil, err
+		} else {
+			fallback = f
+		}
+	}
+
+	return hookToItemOrSlice(t, podTemplate{
+		File: &fileTemplate{
+			Path:     path,
+			Fallback: fallback,
+		},
+	}, source)
 }
 
 func hookFromInlineConfig(t reflect.Type, inline interface{}) (interface{}, error) {
@@ -90,16 +126,7 @@ func hookFromInlineConfig(t reflect.Type, inline interface{}) (interface{}, erro
 		}
 	}
 
-	if t == reflect.TypeOf(podTemplate{}) {
-		return podTemplate{Inline: inline.(string)}, nil
-
-	} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
-		return []podTemplate{
-			{Inline: inline.(string)},
-		}, nil
-	}
-
-	return nil, errors.New(fmt.Sprintf("invalid `inline` config type: %T (%+v)", inline, inline))
+	return hookToItemOrSlice(t, podTemplate{Inline: inline.(string)}, inline)
 }
 
 func hookFromHttpConfig(t reflect.Type, source interface{}) (interface{}, error) {
@@ -129,36 +156,48 @@ func hookFromHttpConfig(t reflect.Type, source interface{}) (interface{}, error)
 			}
 		}
 
-		if v, ok := config[PropFallback]; ok {
-			var f podTemplate
-
-			if decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				Result:     &f,
-				DecodeHook: podTemplateHookFunc(),
-			}); err != nil {
-				return nil, err
-			} else if err := decoder.Decode(v); err != nil {
-				return nil, err
-			} else {
-				fallback = &f
-			}
+		if f, err := hookDecodeFallback(config); err != nil {
+			return nil, err
+		} else {
+			fallback = f
 		}
 	}
 
-	if t == reflect.TypeOf(podTemplate{}) {
-		return podTemplate{
-			Http: &httpTemplate{
-				URL:      url,
-				Insecure: insecure,
-				Fallback: fallback,
-			},
-		}, nil
+	return hookToItemOrSlice(t, podTemplate{
+		Http: &httpTemplate{
+			URL:      url,
+			Insecure: insecure,
+			Fallback: fallback,
+		},
+	}, source)
+}
 
-	} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
-		return []podTemplate{
-			{Http: &httpTemplate{URL: url, Insecure: insecure, Fallback: fallback}},
-		}, nil
+func hookDecodeFallback(config map[string]interface{}) (*podTemplate, error) {
+	if v, ok := config[PropFallback]; ok {
+		var f podTemplate
+
+		if decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			Result:     &f,
+			DecodeHook: podTemplateHookFunc(),
+		}); err != nil {
+			return nil, err
+		} else if err := decoder.Decode(v); err != nil {
+			return nil, err
+		} else {
+			return &f, nil
+		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("invalid `http` config type: %T (%+v)", source, source))
+	return nil, nil
+}
+
+func hookToItemOrSlice(t reflect.Type, tmpl podTemplate, item interface{}) (interface{}, error) {
+	if t == reflect.TypeOf(podTemplate{}) {
+		return tmpl, nil
+
+	} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
+		return []podTemplate{tmpl}, nil
+	}
+
+	return nil, errors.New(fmt.Sprintf("invalid template item config type: %T (%+v)", item, item))
 }

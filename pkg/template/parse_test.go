@@ -42,6 +42,68 @@ x-podlike:
 	}))
 }
 
+func TestParse_File(t *testing.T) {
+	verifyParseResults(t, `
+version: '3.5'
+services:
+  test:
+    image: test/validate
+
+x-podlike:
+  test:
+    pod: direct-file.yml
+    transformer:
+      file: mapped-file.yml
+    templates:
+      - file:
+          path: struct-file.yml
+          fallback:
+            inline: InlineFallback
+`,
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Pod) == 1 && c.Pod[0].File != nil &&
+				c.Pod[0].File.Path == "direct-file.yml" &&
+				c.Pod[0].File.Fallback == nil
+		}),
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Transformer) == 1 && c.Transformer[0].File != nil &&
+				c.Transformer[0].File.Path == "mapped-file.yml" &&
+				c.Transformer[0].File.Fallback == nil
+		}),
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Templates) == 1 && c.Templates[0].File != nil &&
+				c.Templates[0].File.Path == "struct-file.yml" &&
+				c.Templates[0].File.Fallback != nil &&
+				c.Templates[0].File.Fallback.Inline == "InlineFallback"
+		}))
+}
+
+func TestParse_Inline(t *testing.T) {
+	verifyParseResults(t, `
+version: '3.5'
+services:
+  test:
+    image: test/validate
+
+x-podlike:
+  test:
+    transformer:
+      inline:
+        main:
+          image: sample/transformer
+    templates:
+      - inline: |
+          extra:
+            image: sample/templated
+`,
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Transformer) == 1 && strings.Contains(c.Transformer[0].Inline, "image: sample/transformer")
+		}),
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return len(c.Templates) == 1 && strings.Contains(c.Templates[0].Inline, "image: sample/templated")
+		}))
+}
+
 func TestParse_Http(t *testing.T) {
 	verifyParseResults(t, `
 version: '3.5'
@@ -97,7 +159,7 @@ x-podlike:
 		}))
 }
 
-func TestParse_Inline(t *testing.T) {
+func TestParse_MultipleFallbacks(t *testing.T) {
 	verifyParseResults(t, `
 version: '3.5'
 services:
@@ -106,20 +168,26 @@ services:
 
 x-podlike:
   test:
-    transformer:
-      inline:
-        main:
-          image: sample/transformer
-    templates:
-      - inline: |
-          extra:
-            image: sample/templated
+    pod:
+      http:
+        url: http://fresh.version
+        fallback:
+          file:
+            path: local.copy
+            fallback:
+              inline: WorstCaseScenario
 `,
 		verifyParsedService("test", func(c transformConfiguration) bool {
-			return len(c.Transformer) == 1 && strings.Contains(c.Transformer[0].Inline, "image: sample/transformer")
+			return len(c.Pod) == 1 && c.Pod[0].Http != nil && c.Pod[0].Http.URL == "http://fresh.version"
 		}),
 		verifyParsedService("test", func(c transformConfiguration) bool {
-			return len(c.Templates) == 1 && strings.Contains(c.Templates[0].Inline, "image: sample/templated")
+			return c.Pod[0].Http.Fallback != nil &&
+				c.Pod[0].Http.Fallback.File != nil &&
+				c.Pod[0].Http.Fallback.File.Path == "local.copy"
+		}),
+		verifyParsedService("test", func(c transformConfiguration) bool {
+			return c.Pod[0].Http.Fallback.File.Fallback != nil &&
+				c.Pod[0].Http.Fallback.File.Fallback.Inline == "WorstCaseScenario"
 		}))
 }
 

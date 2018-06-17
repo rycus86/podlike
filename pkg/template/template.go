@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"text/template"
 )
@@ -91,6 +92,11 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 
 	} else {
 		tmpl, err = tmpl.ParseFiles(path.Join(workingDir, t.File.Path))
+		if err != nil {
+			if _, ok := err.(*os.PathError); ok && t.File.Fallback != nil {
+				return t.File.Fallback.prepareTemplate(workingDir)
+			}
+		}
 
 	}
 

@@ -198,6 +198,41 @@ component:
 	}
 }
 
+func TestRender_MultipleFallbacks(t *testing.T) {
+	tmpl := podTemplate{
+		Http: &httpTemplate{
+			URL: "http://127.0.0.1:65001/not/found",
+			Fallback: &podTemplate{
+				File: &fileTemplate{
+					Path: "/does/not/exist.yml",
+					Fallback: &podTemplate{
+						Inline: `
+component:
+  image: sample/multiple:fallback
+`,
+					},
+				},
+			},
+		},
+	}
+
+	rendered := tmpl.render(&transformConfiguration{
+		Service: &types.ServiceConfig{},
+		Args:    map[string]interface{}{},
+		Session: &transformSession{},
+	})
+
+	if comp, ok := rendered["component"]; !ok {
+		t.Error("Root key not found")
+	} else if mComp, ok := comp.(map[string]interface{}); !ok {
+		t.Error("Invalid root key")
+	} else if image, ok := mComp["image"]; !ok {
+		t.Error("Image key not found")
+	} else if image != "sample/multiple:fallback" {
+		t.Error("Invalid image value found")
+	}
+}
+
 func TestRender_WithFuncs(t *testing.T) {
 	tmpl := podTemplate{
 		Inline: `
