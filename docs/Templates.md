@@ -108,14 +108,23 @@ All 4 types of definitions accept either a single item, or a list of items. An i
 
 1. A simple string
 
-This points to a template file.
+This points to a template file or an HTTP(S) address.
 
 ```yaml
 x-podlike:
   example:
     pod:
       - templates/pod.yml
+    transformer:
+      - file:
+          path: local.template.yml
+          fallback:
+            inline: InlineFallbackIfFileNotAvailable
+    templates:
+      - https://template.srv.local/addon.yml
 ```
+
+File templates can be given with a simple *string* pointing to a file, or as a mapping with a mandatory `path` field, and an optional `fallback` property if loading the file fails.
 
 2. An inline template mapping
 
@@ -143,7 +152,22 @@ x-podlike:
   example:
     pod:
       - http: https://my.templates.local/pods/sample.yml
+    transformer:
+      - http:
+          url: https://maybe.insecure.local/transformer/sample.yml
+          insecure: true
+      - http:
+          url: http://template.cache.local/addons/cache.yml
+          fallback:
+            file:
+              path: cached/local.copy.yml
+              fallback:
+                inline: |
+                  main:
+                    image: sensible/defaults
 ```
+
+As shown above, the value of the `http` property can be a simple URL *string*, or a mapping with a mandatory `url` field, plus an optional `insecure` property to disable SSL certificate validation, and a `fallback` field to specify the template to try if loading from HTTP fails.
 
 ### Controller templates
 
