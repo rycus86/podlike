@@ -27,7 +27,9 @@ component:
 	}
 
 	tmpl := podTemplate{
-		Template: tmplFile.Name(),
+		File: &fileTemplate{
+			Path: tmplFile.Name(),
+		},
 	}
 
 	rendered := tmpl.render(&transformConfiguration{

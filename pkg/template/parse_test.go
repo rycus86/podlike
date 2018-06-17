@@ -17,7 +17,28 @@ x-podlike:
   test:
     pod: simple.yml
 `, verifyParsedService("test", func(c transformConfiguration) bool {
-		return len(c.Pod) == 1 && c.Pod[0].Template == "simple.yml"
+		return len(c.Pod) == 1 && c.Pod[0].File != nil && c.Pod[0].File.Path == "simple.yml"
+	}))
+}
+
+func TestParse_FileOrHttp(t *testing.T) {
+	verifyParseResults(t, `
+version: '3.5'
+services:
+  test:
+    image: test/validate
+
+x-podlike:
+  test:
+    templates: 
+      - from-file.yml
+      - http://remote.srv/tmpl.yml
+      - https://secure.srv/addon.yml
+`, verifyParsedService("test", func(c transformConfiguration) bool {
+		return len(c.Templates) == 3 &&
+			c.Templates[0].File != nil && c.Templates[0].File.Path == "from-file.yml" &&
+			c.Templates[1].Http != nil && c.Templates[1].Http.URL == "http://remote.srv/tmpl.yml" &&
+			c.Templates[2].Http != nil && c.Templates[2].Http.URL == "https://secure.srv/addon.yml"
 	}))
 }
 
@@ -71,7 +92,8 @@ x-podlike:
 				c.Templates[1].Http.Insecure == true &&
 				c.Templates[1].Http.Fallback != nil &&
 				c.Templates[1].Http.Fallback.Inline == "" &&
-				c.Templates[1].Http.Fallback.Template == "from/file.yml"
+				c.Templates[1].Http.Fallback.File != nil &&
+				c.Templates[1].Http.Fallback.File.Path == "from/file.yml"
 		}))
 }
 

@@ -41,8 +41,8 @@ func (t *podTemplate) render(tc *transformConfiguration) map[string]interface{} 
 
 func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 	name := TypeInline
-	if t.Inline == "" && t.Http == nil {
-		name = path.Base(t.Template)
+	if t.File != nil {
+		name = path.Base(t.File.Path)
 	}
 
 	tmpl := template.New(name).Funcs(podTemplateFuncMap)
@@ -90,7 +90,7 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 		tmpl, err = tmpl.Parse(t.Inline)
 
 	} else {
-		tmpl, err = tmpl.ParseFiles(path.Join(workingDir, t.Template))
+		tmpl, err = tmpl.ParseFiles(path.Join(workingDir, t.File.Path))
 
 	}
 

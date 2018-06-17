@@ -25,9 +25,14 @@ type transformConfiguration struct {
 }
 
 type podTemplate struct {
-	Template string
-	Inline   string
-	Http     *httpTemplate
+	File   *fileTemplate
+	Inline string
+	Http   *httpTemplate
+}
+
+type fileTemplate struct {
+	Path     string
+	Fallback *podTemplate
 }
 
 type httpTemplate struct {

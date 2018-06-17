@@ -6,6 +6,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v2"
 	"reflect"
+	"regexp"
+)
+
+var (
+	httpPrefix = regexp.MustCompile("(?i)^https?://")
 )
 
 func podTemplateHookFunc() mapstructure.DecodeHookFunc {
@@ -33,7 +38,7 @@ func podTemplateHookFunc() mapstructure.DecodeHookFunc {
 func hookFromSlice(t reflect.Type, data interface{}) interface{} {
 	if t == reflect.TypeOf(podTemplate{}) {
 		item := reflect.ValueOf(data).Index(0).Interface()
-		return podTemplate{Template: item.(string)}
+		return hookStringToPodTemplate(item.(string))
 	}
 
 	return data
@@ -41,15 +46,23 @@ func hookFromSlice(t reflect.Type, data interface{}) interface{} {
 
 func hookFromString(t reflect.Type, data interface{}) interface{} {
 	if t == reflect.TypeOf(podTemplate{}) {
-		return podTemplate{Template: data.(string)}
+		return hookStringToPodTemplate(data.(string))
 
 	} else if t.Kind() == reflect.Slice && t.Elem() == reflect.TypeOf(podTemplate{}) {
 		return []podTemplate{
-			{Template: data.(string)},
+			hookStringToPodTemplate(data.(string)),
 		}
 	}
 
 	return data
+}
+
+func hookStringToPodTemplate(source string) podTemplate {
+	if httpPrefix.MatchString(source) {
+		return podTemplate{Http: &httpTemplate{URL: source}}
+	} else {
+		return podTemplate{File: &fileTemplate{Path: source}}
+	}
 }
 
 func hookFromMap(t reflect.Type, data interface{}) (interface{}, error) {
