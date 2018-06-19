@@ -2,6 +2,7 @@ package template
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 )
@@ -198,6 +199,7 @@ func verifyParseResults(t *testing.T, input string, asserts ...parseAssert) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(f.Name())
 	defer f.Close()
 
 	f.WriteString(input)

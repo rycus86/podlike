@@ -74,7 +74,7 @@ func (ts *transformSession) collectTopLevelConfigurations(configFile types.Confi
 			if mArgs, ok := args.(map[string]interface{}); ok {
 				mergeRecursively(ts.Args, mArgs)
 				delete(globalConfig, ArgsProperty)
-			} else {
+			} else if args != nil {
 				panic("template args is not a mapping")
 			}
 		}

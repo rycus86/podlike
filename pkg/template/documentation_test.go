@@ -64,6 +64,40 @@ func TestExampleYamlsAreValid(t *testing.T) {
 		if err := yaml.Unmarshal(source, &converted); err != nil {
 			t.Error("Invalid YAML example in", path, ":", err, "\n", string(source))
 		}
+
+		if bytes.Contains(source, []byte("x-podlike")) {
+			// add in the Compose version if missing
+			if !bytes.Contains(source, []byte("version:")) {
+				source = append([]byte("version: '3.5'\n"), source...)
+			}
+
+			loadPath := path
+
+			// extract YAMLs from Markdown
+			if filepath.Ext(path) == ".md" {
+				f, err := ioutil.TempFile("", "podlike-doc-test")
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer os.Remove(f.Name())
+				defer f.Close()
+
+				f.Write(source)
+
+				loadPath = f.Name()
+			}
+
+			defer func() {
+				if err := recover(); err != nil {
+					t.Error("Failed to parse the x-podlike configuration in", path, ":", err, "\n", string(source))
+				}
+			}()
+
+			session := newSession(loadPath)
+			if len(session.Configurations) == 0 {
+				t.Error("Invalid x-podlike configuration in", path)
+			}
+		}
 	}
 
 	checkMarkdown := func(path string) {

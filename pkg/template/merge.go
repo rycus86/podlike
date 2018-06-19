@@ -45,6 +45,10 @@ func containsItem(coll []string, item string) bool {
 // We can also merge a string into a slice, but not the other way around.
 // Existing items won't get overwritten, apart from the custom slice/map merge logic just described.
 func mergeRecursively(target, source map[string]interface{}) {
+	if target == nil || source == nil {
+		return
+	}
+
 	for key, value := range source {
 		if existing, ok := target[key]; ok {
 			if m, ok := existing.(map[string]interface{}); ok {
