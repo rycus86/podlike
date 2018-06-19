@@ -1,5 +1,8 @@
 # Modernized stack
 
+- [Usage](#usage)
+- [Components](#components)
+
 The example stack in this folder attempts to demonstrate how we can get some extra value for each of our *HTTP-y* applications by surrounding the with various services. Some of them will be placed in each of their *"pods"*, some will be centrally deployed in the stack. It includes a *DYI* service mesh with service discovery, log aggregation, metrics collection and distributed tracing.
 
 - The `data-server` app returns some configuration and static config as JSON

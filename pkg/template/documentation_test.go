@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestFuncsDocsAreUpToDate(t *testing.T) {
+func TestDocs_FuncsDocsAreUpToDate(t *testing.T) {
 	data, err := ioutil.ReadFile("../../docs/Templates.md")
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +27,7 @@ func TestFuncsDocsAreUpToDate(t *testing.T) {
 	}
 }
 
-func TestExampleYamlsAreValid(t *testing.T) {
+func TestDocs_ExampleYamlsAreValid(t *testing.T) {
 	yamlDocsPattern := regexp.MustCompile("(?sm)```yaml(.*?)```")
 	templatedValue := regexp.MustCompile("{{[^{}]+}}")
 
@@ -128,6 +129,67 @@ func TestExampleYamlsAreValid(t *testing.T) {
 				checkMarkdown(path)
 			case ".yml", ".yaml":
 				checkYaml(path, nil)
+			}
+		}
+
+		return nil
+	})
+}
+
+func TestDocs_TableOfContentsAreUpToDate(t *testing.T) {
+	codeBlockPattern := regexp.MustCompile("(?sm)```(.*?)```")
+	nonCodeChars := regexp.MustCompile("[^a-zA-Z0-9\\-]")
+
+	extractToc := func(contents string) string {
+		expected := ""
+
+		for _, line := range strings.Split(contents, "\n") {
+			if strings.HasPrefix(line, "##") {
+				level := strings.Count(line, "#")
+
+				heading := strings.Replace(line, "#", "", -1)
+				heading = strings.TrimSpace(heading)
+
+				anchor := strings.ToLower(heading)
+				anchor = strings.Replace(anchor, " ", "-", -1)
+				anchor = nonCodeChars.ReplaceAllString(anchor, "")
+
+				prefix := strings.Repeat("    ", level-2)
+
+				expected += fmt.Sprintf("%s- [%s](#%s)\n", prefix, heading, anchor)
+			}
+		}
+
+		return strings.TrimSuffix(expected, "\n")
+	}
+
+	checkMarkdown := func(path string) {
+		rawContents, err := ioutil.ReadFile(path)
+		if err != nil {
+			t.Error(err)
+		}
+
+		contents := string(codeBlockPattern.ReplaceAll(rawContents, []byte("")))
+		expected := extractToc(contents)
+
+		if !strings.Contains(contents, expected) {
+			t.Error("Expected ToC not found in ", path, ":\n"+expected)
+		}
+	}
+
+	filepath.Walk("../../.", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			if info.Name() == "vendor" {
+				return filepath.SkipDir
+			}
+
+		} else {
+			if filepath.Ext(path) == ".md" {
+				checkMarkdown(path)
 			}
 		}
 

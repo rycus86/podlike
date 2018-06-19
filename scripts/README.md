@@ -1,5 +1,9 @@
 # Podlike scripts
 
+- [podtemplate](#podtemplate)
+    - [Sub-commands](#sub-commands)
+    - [Limitations](#limitations)
+
 Command line shell wrapper scripts for common helpers of Podlike.
 
 ## podtemplate

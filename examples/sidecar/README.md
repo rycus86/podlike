@@ -1,5 +1,7 @@
 # Sidecar example
 
+- [Usage](#usage)
+
 This example deploys a demo website, running on Python Flask, behind a caching Nginx reverse proxy. The two containers will share namespaces, so the communication happens on `localhost` between them (on loopback). Logs are streamed to make it easy to follow them.
 
 ## Usage

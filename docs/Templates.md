@@ -1,5 +1,18 @@
 # Templates
 
+- [Configuration](#configuration)
+- [Top-level extension](#top-level-extension)
+    - [Template definition types](#template-definition-types)
+    - [Controller templates](#controller-templates)
+    - [Main component templates](#main-component-templates)
+    - [Additional component templates](#additional-component-templates)
+    - [Copy templates](#copy-templates)
+- [Template merging](#template-merging)
+- [Service-level extension](#service-level-extension)
+- [Using YAML anchors](#using-yaml-anchors)
+- [Template variables and functions](#template-variables-and-functions)
+- [Usage](#usage)
+
 Podlike comes with a built-in template processor, to help transforming services and their tasks in Docker Swarm stacks into a *"pod"*, a set of co-located and tightly coupled containers. Similar stacks, or similar types of applications in a stack, could often benefit from decorating the tasks with the same components, with only slightly different configuration. For example, [sidecars](https://github.com/rycus86/podlike/tree/master/examples/sidecar) or [service meshes](https://github.com/rycus86/podlike/tree/master/examples/service-mesh) usually need the same component consistently deployed with the applications themselves, and we'd probably want changes to these components done in a single place, and applied to all services (or a set of them) at the same time.
 
 Using templates gives you a flexible way to define these components, and allows you to reuse the components accross stacks and services. Templates generate parts of a YAML [Compose file](https://docs.docker.com/compose/compose-file/) using Go's [text/template package](https://golang.org/pkg/text/template/). The templates to use are defined directly in the stack YAML files with extension fields, so the configuration lives within them, and can be versioned/changed/rolled out with the same workflows as the original stack.

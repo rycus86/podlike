@@ -1,7 +1,18 @@
 # Podlike
 
 An attempt at managing co-located containers (like in a Pod in Kubernetes) mainly for services on top of Docker Swarm mode.
-The general idea is the same: this container will act as a parent for the one or more children containers started as part of the *emulated* pod. Containers within this pod can use `localhost` (the loopback interface) to communicate with each other.
+
+- [Use-cases](#use-cases)
+- [Configuration](#configuration)
+- [Templates](#templates)
+- [Volumes](#volumes)
+- [Dragons!](#dragons)
+- [Work in progress](#work-in-progress)
+- [Unsupported properties](#unsupported-properties)
+- [Command line usage](#command-line-usage)
+- [License](#license)
+
+The general idea is the same as in Kubernetes: this container will act as a parent for the one or more children containers started as part of the *emulated* pod. Containers within this pod can use `localhost` (the loopback interface) to communicate with each other.
 They can also share the same volumes, and can also see each other's PIDs, so sending UNIX signals between containers is possible.
 
 These are always shared:
