@@ -19,7 +19,7 @@ type verifyCreate struct {
 	Verify func(name string, body map[string]interface{})
 }
 
-func TestOneComponent(t *testing.T) {
+func TestController_OneComponent(t *testing.T) {
 	components, err := newTestClient(map[string]string{
 		"pod.component.single": "{image: sample, command: a b c}",
 	}, nil, nil).GetComponents()
@@ -47,7 +47,7 @@ func TestOneComponent(t *testing.T) {
 	}
 }
 
-func TestComposeProject(t *testing.T) {
+func TestController_ComposeProject(t *testing.T) {
 	components, err := newTestClient(map[string]string{
 		"pod.compose.file": "testdata/docker-compose.yml",
 	}, nil, nil).GetComponents()
@@ -88,7 +88,7 @@ func TestComposeProject(t *testing.T) {
 	}
 }
 
-func TestStartComponent(t *testing.T) {
+func TestController_StartComponent(t *testing.T) {
 	labels := map[string]string{
 		"pod.component.start": `
 image: sample

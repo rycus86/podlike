@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestVolumesShortSyntax(t *testing.T) {
+func TestVolumes_ShortSyntax(t *testing.T) {
 	verifyVolumes(`
 volumes:
   - /tmp/data:/c/data
@@ -18,7 +18,7 @@ volumes:
 		volume.Volume{Target: "/c/target/only"})
 }
 
-func TestVolumesLongSyntax(t *testing.T) {
+func TestVolumes_LongSyntax(t *testing.T) {
 	verifyVolumes(`
 volumes:
   - type: bind
@@ -40,7 +40,7 @@ volumes:
 		}{"50m"}})
 }
 
-func TestVolumesMixedSyntax(t *testing.T) {
+func TestVolumes_MixedSyntax(t *testing.T) {
 	verifyVolumes(`
 volumes:
   - /tmp/data:/c/data

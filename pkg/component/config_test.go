@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-func TestDeserialization(t *testing.T) {
+func TestConfig_Deserialization(t *testing.T) {
 	item, err := deserialize(`
 image: alpine
 command: echo "hello"
@@ -81,7 +81,7 @@ stop_grace_period: 1m30s
 	}
 }
 
-func TestSlices(t *testing.T) {
+func TestConfig_Slices(t *testing.T) {
 	item, err := deserialize(`
 image: sample
 entrypoint:
@@ -107,7 +107,7 @@ command: ["sh", "-c", "ping && pong"]
 	}
 }
 
-func TestHealthCheck(t *testing.T) {
+func TestConfig_HealthCheck(t *testing.T) {
 	item, err := deserialize(`
 image: sample
 healthcheck:
@@ -163,7 +163,7 @@ func mapContains(item string, m map[string]string) bool {
 	return ok && value == parts[1]
 }
 
-func TestEnvAndLabelsAsSliceOrMap(t *testing.T) {
+func TestConfig_EnvAndLabelsAsSliceOrMap(t *testing.T) {
 	var (
 		item *Component
 		err  error
@@ -235,7 +235,7 @@ labels:
 	}
 }
 
-func TestWithEnvFiles(t *testing.T) {
+func TestConfig_WithEnvFiles(t *testing.T) {
 	f1, err := ioutil.TempFile("/tmp", "first")
 	if err != nil {
 		t.Fatal(err)
@@ -319,7 +319,7 @@ env_file:
 	}
 }
 
-func TestUlimits(t *testing.T) {
+func TestConfig_Ulimits(t *testing.T) {
 	item, err := deserialize(`
 image: sample
 ulimits:
@@ -343,7 +343,7 @@ ulimits:
 	}
 }
 
-func TestDefaults(t *testing.T) {
+func TestConfig_Defaults(t *testing.T) {
 	item, err := deserialize("image: defaults")
 	if err != nil {
 		t.Fatal("Failed to deserialize config:", err)

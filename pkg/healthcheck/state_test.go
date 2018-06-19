@@ -15,7 +15,7 @@ var (
 	results = map[string]bool{}
 )
 
-func TestWaitUntilStarted(t *testing.T) {
+func TestState_WaitUntilStarted(t *testing.T) {
 	startWait(c1, false)
 
 	pause()
@@ -27,7 +27,7 @@ func TestWaitUntilStarted(t *testing.T) {
 	assertReady(t, c1)
 }
 
-func TestWaitUntilHealthy(t *testing.T) {
+func TestState_WaitUntilHealthy(t *testing.T) {
 	startWait(c2, true)
 
 	pause()

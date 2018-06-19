@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func ExampleCopyConfigStyles() {
+func ExampleCopy_ConfigStyles() {
 	fmt.Printf("%v\n", parseAndVerify(nil, `
 pod.copy.test: /simple/source:/to/target
 `))
@@ -35,7 +35,7 @@ pod.copy.test: |
 	// [{/etc/conf/cache.conf /opt/cache/conf.d/default.conf} {/etc/conf/ssl.cert /etc/ssl/myapp.cert} {/etc/conf/ssl.key /etc/ssl/myapp.key}]
 }
 
-func ExampleParsingFailures() {
+func ExampleCopy_ParsingFailures() {
 	parseAndExpectFailure("pod.copy.test: /src")
 	parseAndExpectFailure("pod.copy.test: /src: /dst")
 	parseAndExpectFailure(`
@@ -77,7 +77,7 @@ pod.copy.test: >
 	// invalid pod.copy configuration: /should:/have /been:/with/pipe /not:/greater/than/sign
 }
 
-func TestParseAsSimpleString(t *testing.T) {
+func TestCopy_ParseAsSimpleString(t *testing.T) {
 	parseAndVerify(t, "pod.copy.test: /src:/dst",
 		CopyConfig{"/src", "/dst"})
 
@@ -87,7 +87,7 @@ pod.copy.test: >
 `, CopyConfig{"/new", "/line"})
 }
 
-func TestParseAsSequenceOfStrings(t *testing.T) {
+func TestCopy_ParseAsSequenceOfStrings(t *testing.T) {
 	parseAndVerify(t, `
 pod.copy.test: | 
   - /one:/first
@@ -100,7 +100,7 @@ pod.copy.test: >
 `, CopyConfig{"/one", "/first"}, CopyConfig{"/two", "/second"})
 }
 
-func TestParseAsMappingOfStrings(t *testing.T) {
+func TestCopy_ParseAsMappingOfStrings(t *testing.T) {
 	parseAndVerify(t, `
 pod.copy.test: | 
   /one: /first
@@ -118,7 +118,7 @@ pod.copy.test: |
 		CopyConfig{"/whitespace", "/mapping"})
 }
 
-func TestSameSourceDifferentTargets(t *testing.T) {
+func TestCopy_SameSourceDifferentTargets(t *testing.T) {
 	parseAndVerify(t, `
 pod.copy.test: |
   - '/src:/target/1'

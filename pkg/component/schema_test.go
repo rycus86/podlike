@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestSchema(t *testing.T) {
+func TestSchema_UnsupportedFields(t *testing.T) {
 	schemaData, err := ioutil.ReadFile("testdata/config_schema_v2.4.json")
 	if err != nil {
 		t.Fatal(err)

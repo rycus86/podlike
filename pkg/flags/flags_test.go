@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestReadmeIsUpToDate(t *testing.T) {
+func TestDocs_ReadmeIsUpToDate(t *testing.T) {
 	flag.CommandLine = flag.NewFlagSet("/podlike", flag.ContinueOnError)
 	setupVariables()
 

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestDependenciesAsSlice(t *testing.T) {
+func TestDependencies_AsSlice(t *testing.T) {
 	deps, err := parseDependencies(`
 depends_on:
   - first
@@ -17,7 +17,7 @@ depends_on:
 	verifyMatches(t, deps, Dependency{Name: "first"}, Dependency{Name: "second"})
 }
 
-func TestDependenciesAsMap(t *testing.T) {
+func TestDependencies_AsMap(t *testing.T) {
 	deps, err := parseDependencies(`
 depends_on:
   first:
