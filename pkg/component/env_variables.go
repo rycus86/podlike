@@ -88,7 +88,7 @@ func mergeEnvVariables(fromFiles, fromVariables map[string]string) []string {
 
 	asSlice, err := convert.ToStringSlice(merged)
 	if err != nil {
-		panic(nil) // shouldn't happen
+		panic(fmt.Sprintf("failed to convert to a slice : %s\n%+v", err.Error(), merged)) // shouldn't happen
 	}
 
 	return asSlice

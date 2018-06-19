@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"github.com/docker/cli/cli/compose/loader"
 	"github.com/docker/cli/cli/compose/types"
 	"io/ioutil"
@@ -30,12 +31,12 @@ func newSession(inputFiles ...string) *transformSession {
 	for idx, inputFile := range inputFiles {
 		contents, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to read the contents of %s : %s", inputFile, err.Error()))
 		}
 
 		parsed, err := loader.ParseYAML(contents)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to parse a YAML : %s\n%s", err.Error(), string(contents)))
 		}
 
 		session.ConfigFiles[idx] = types.ConfigFile{
@@ -51,7 +52,7 @@ func newSession(inputFiles ...string) *transformSession {
 		WorkingDir:  session.WorkingDir,
 	})
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to load stack YAMLs into a config : %s\nfrom: %+v", err.Error(), session.ConfigFiles))
 	}
 
 	session.Project = config

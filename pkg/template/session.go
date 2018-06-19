@@ -24,13 +24,15 @@ func (ts *transformSession) collectServiceLevelConfigurations(configFile types.C
 
 	mServices, ok := services.(map[string]interface{})
 	if !ok {
-		panic("top level services is not a mapping")
+		panic(fmt.Sprintf("top level services is not a mapping, but a %T\n%+v", services, services))
 	}
 
 	for serviceName, definition := range mServices {
 		mDefinition, ok := definition.(map[string]interface{})
 		if !ok {
-			panic(fmt.Sprintf("service definition is not a mapping for %s", serviceName))
+			panic(fmt.Sprintf(
+				"service definition is not a mapping for %s, but a %T\n%+v",
+				serviceName, definition, definition))
 		}
 
 		configSection, ok := mDefinition[XPodlikeExtension]
@@ -50,12 +52,12 @@ func (ts *transformSession) collectServiceLevelConfigurations(configFile types.C
 			DecodeHook: podTemplateHookFunc(),
 		})
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to set up a podlike config decoder : %s", err.Error()))
 		}
 
 		err = decoder.Decode(configSection)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to decode a podlike configuration : %s\n%+v", err.Error(), configSection))
 		}
 
 		ts.registerService(serviceName, config)
@@ -66,7 +68,9 @@ func (ts *transformSession) collectTopLevelConfigurations(configFile types.Confi
 	if configSection, ok := configFile.Config[XPodlikeExtension]; ok {
 		globalConfig, ok := configSection.(map[string]interface{})
 		if !ok {
-			panic("top level x-podlike config is not a mapping")
+			panic(fmt.Sprintf(
+				"top level x-podlike config is not a mapping, but a %T\n%+v",
+				configSection, configSection))
 		}
 
 		// extract the top level global arguments first
@@ -75,7 +79,7 @@ func (ts *transformSession) collectTopLevelConfigurations(configFile types.Confi
 				mergeRecursively(ts.Args, mArgs)
 				delete(globalConfig, ArgsProperty)
 			} else if args != nil {
-				panic("template args is not a mapping")
+				panic(fmt.Sprintf("template args is not a mapping, but a %T\n%+v", args, args))
 			}
 		}
 
@@ -87,12 +91,14 @@ func (ts *transformSession) collectTopLevelConfigurations(configFile types.Confi
 			DecodeHook: podTemplateHookFunc(),
 		})
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to set up a podlike config decoder : %s", err.Error()))
 		}
 
 		err = decoder.Decode(configSection)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf(
+				"failed to decode the top-level podlike configurations : %s\n%+v",
+				err.Error(), configSection))
 		}
 
 		for serviceName, config := range configs {
@@ -144,7 +150,9 @@ func (ts *transformSession) registerService(name string, config transformConfigu
 func (ts *transformSession) toYamlString() string {
 	output, err := yaml.Marshal(ts.Project)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf(
+			"failed to convert a template transformer session to YAML : %s\n%+v",
+			err.Error(), ts.Project))
 	}
 
 	return string(output)

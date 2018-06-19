@@ -163,7 +163,7 @@ func newTestClient(
 	)
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to initialize the Docker client : %s", err.Error()))
 	}
 
 	return &Client{

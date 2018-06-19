@@ -14,7 +14,7 @@ func Transform(inputFiles ...string) string {
 	for serviceName, config := range session.Configurations {
 		index := config.getServiceIndex()
 		if index < 0 {
-			panic(fmt.Sprint("service index not found:", serviceName))
+			panic(fmt.Sprintf("service index not found for %s\n%+v", serviceName, session.Project.Services))
 		}
 
 		podController := executePodTemplates(&config)
@@ -51,7 +51,9 @@ func executePodTemplates(tc *transformConfiguration) types.ServiceConfig {
 	for _, tmpl := range tc.Pod {
 		rendered := tmpl.render(tc)
 		if len(rendered) != 1 {
-			panic("the pod template can only define a single controller service")
+			panic(fmt.Sprintf(
+				"the pod template can only define a single controller service, but got %d\n%+v",
+				len(rendered), rendered))
 		}
 
 		rendered = changeRootKey(rendered, tc.Service.Name)
@@ -65,7 +67,9 @@ func executePodTemplates(tc *transformConfiguration) types.ServiceConfig {
 
 	converted := convertToServices(definition, tc.Session.WorkingDir)
 	if len(converted) != 1 {
-		panic(fmt.Sprintf("somehow we ended up with %d definitions for the controller", len(converted)))
+		panic(fmt.Sprintf(
+			"somehow we ended up with %d definitions for the controller\n%+v",
+			len(converted), converted))
 	}
 
 	pod := converted[0]
@@ -95,7 +99,9 @@ func executeTransformers(tc *transformConfiguration) (string, string) {
 	for idx, tmpl := range tc.Transformer {
 		rendered := tmpl.render(tc)
 		if len(rendered) != 1 {
-			panic("the transformer template can only define a single component")
+			panic(fmt.Sprintf(
+				"the transformer template can only define a single component, but we got %d\n%+v",
+				len(rendered), rendered))
 		}
 
 		if idx == 0 {
@@ -114,7 +120,9 @@ func executeTransformers(tc *transformConfiguration) (string, string) {
 
 	converted := convertToServices(definition, tc.Session.WorkingDir)
 	if len(converted) != 1 {
-		panic(fmt.Sprintf("somehow we ended up with %d definitions for the main component", len(converted)))
+		panic(fmt.Sprintf(
+			"somehow we ended up with %d definitions for the main component\n%+v",
+			len(converted), converted))
 	}
 
 	comp := convertToYaml(converted[0])
@@ -200,7 +208,7 @@ func getRootKey(m map[string]interface{}) string {
 		return key
 	}
 
-	panic("cannot find the root key in an empty map")
+	panic(fmt.Sprintf("cannot find the root key in an empty map : %+v", m))
 }
 
 func changeRootKey(m map[string]interface{}, key string) map[string]interface{} {

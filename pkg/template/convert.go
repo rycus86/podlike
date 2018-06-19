@@ -12,7 +12,7 @@ import (
 func convertToYaml(v interface{}) string {
 	output, err := yaml.Marshal(v)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to convert a %T to YAML : %s\n%+v", v, err.Error(), v))
 	}
 
 	return string(output)
@@ -22,7 +22,7 @@ func convertToServices(configuration map[string]interface{}, workingDir string) 
 	if services, err := loader.LoadServices(
 		configuration, workingDir, os.LookupEnv); err != nil {
 
-		panic(err)
+		panic(fmt.Sprintf("failed to convert a configuration to services : %s\n%+v", err.Error(), configuration))
 	} else {
 		return services
 	}

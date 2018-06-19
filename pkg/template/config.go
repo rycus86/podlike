@@ -24,5 +24,5 @@ func (tc *transformConfiguration) getServiceConfig() map[string]interface{} {
 		}
 	}
 
-	panic(fmt.Sprintf("service not found: %s", tc.Service.Name))
+	panic(fmt.Sprintf("service not found: %s\n%+v", tc.Service.Name, tc.Session.ConfigFiles))
 }

@@ -124,13 +124,13 @@ func main() {
 
 	hcServer, err := healthcheck.Serve()
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to serve the health check information : %s", err.Error()))
 	}
 	defer hcServer.Close()
 
 	cli, err := controller.NewClient()
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to initialize the controller client : %s", err.Error()))
 	}
 	defer cli.Close()
 
@@ -138,11 +138,11 @@ func main() {
 
 	components, err := cli.GetComponents()
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to initialize the components : %s", err.Error()))
 	}
 
 	if len(components) == 0 {
-		panic("No components found")
+		panic("no components found")
 	}
 
 	run(components, configuration)

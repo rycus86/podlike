@@ -13,7 +13,7 @@ func extractDependsOnConfig(configuration map[string]interface{}) map[string]int
 
 	for name, config := range configuration {
 		if mConfig, ok := config.(map[string]interface{}); !ok {
-			panic(fmt.Sprintf("unexpected service definition type: %T", config))
+			panic(fmt.Sprintf("unexpected service definition type: %T\n%+v", config, config))
 
 		} else if dependsOn, ok := mConfig["depends_on"]; ok {
 			validateDependsOn(dependsOn)
@@ -46,14 +46,14 @@ func validateDependsOn(v interface{}) {
 			if mConfig, ok := config.(map[string]interface{}); !ok {
 				panic(fmt.Sprintf("invalid depends_on defined for %s (type %T)", svc, config))
 			} else if condition, ok := mConfig["condition"]; !ok {
-				panic(fmt.Sprintf("condition not found for %s dependency", svc))
+				panic(fmt.Sprintf("condition not found for %s dependency : %+v", svc, mConfig))
 			} else if condition != "service_started" && condition != "service_healthy" {
 				panic(fmt.Sprintf("invalid condition defined for %s : %s", svc, condition))
 			}
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected depends_on config type: %T", v))
+		panic(fmt.Sprintf("unexpected depends_on config type: %T\n%+v", v, v))
 	}
 }
 
@@ -64,18 +64,18 @@ func insertDependsOnConfig(target string, source map[string]interface{}, service
 	if svcConfig, ok := source[service]; !ok {
 		return target
 	} else if mConfig, ok := svcConfig.(map[string]interface{}); !ok {
-		panic(fmt.Sprintf("somehow lost the depends_on settings for %s", service))
+		panic(fmt.Sprintf("somehow lost the depends_on settings for %s in %+v", service, svcConfig))
 	} else {
 		config = mConfig["depends_on"]
 	}
 
 	if config == nil {
-		panic(fmt.Sprintf("somehow lost the depends_on settings for %s", service))
+		panic(fmt.Sprintf("somehow lost the depends_on settings for %s in %+v", service, source))
 	}
 
 	parsed, err := loader.ParseYAML([]byte(target))
 	if err != nil {
-		panic(fmt.Sprintf("failed to parse the output YAML for %s", service))
+		panic(fmt.Sprintf("failed to parse the output YAML for %s : %s\n%s", service, err.Error(), target))
 	}
 
 	parsed["depends_on"] = config

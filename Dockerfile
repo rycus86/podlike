@@ -35,8 +35,7 @@ LABEL com.github.rycus86.podlike.version="$VERSION"
 LABEL com.github.rycus86.podlike.commit="$GIT_COMMIT"
 
 COPY --from=builder /var/out/main  /podlike
-COPY --from=builder /var/out/hc    /healthcheck
 
-HEALTHCHECK --interval=2s --timeout=3s --retries=5 CMD [ "/healthcheck" ]
+HEALTHCHECK --interval=2s --timeout=3s --retries=5 CMD [ "/podlike", "healthcheck" ]
 
 ENTRYPOINT [ "/podlike" ]

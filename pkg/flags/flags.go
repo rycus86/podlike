@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/rycus86/podlike/pkg/config"
+	"github.com/rycus86/podlike/pkg/healthcheck"
 	"github.com/rycus86/podlike/pkg/template"
 	"github.com/rycus86/podlike/pkg/version"
 	"os"
@@ -26,7 +27,15 @@ func setupVariables() {
 
 func Parse() *config.Configuration {
 	if len(os.Args) > 1 {
-		if os.Args[1] == "template" {
+		if os.Args[1] == "healthcheck" {
+
+			if healthcheck.Check() {
+				os.Exit(0)
+			} else {
+				os.Exit(1)
+			}
+
+		} else if os.Args[1] == "template" {
 
 			template.PrintTemplatedStack(os.Args[2:]...)
 			os.Exit(0)

@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
@@ -24,17 +25,21 @@ func (t *podTemplate) render(tc *transformConfiguration) map[string]interface{} 
 		Service: tc.Service,
 		Args:    allArgs,
 	}); err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to render a template : %s\n%+v", err.Error(), t))
 	}
 
 	var changed map[interface{}]interface{}
 	if err := yaml.Unmarshal(buffer.Bytes(), &changed); err != nil {
-		panic(err)
+		panic(fmt.Sprintf(
+			"failed to decode the template result into a YAML : %s\n%s",
+			err.Error(), buffer.String()))
 	}
 
 	converted, err := convertToStringKeysRecursive(changed, "")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf(
+			"failed to convert the template result to map[string]interface{} recursively : %s\n%+v",
+			err.Error(), changed))
 	}
 
 	return converted.(map[string]interface{})
@@ -83,7 +88,11 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 			return t.Http.Fallback.prepareTemplate(workingDir)
 
 		} else {
-			panic(err)
+			if err != nil {
+				panic(fmt.Sprintf("failed to an HTTP template from %s : %s", t.Http.URL, err.Error()))
+			} else {
+				panic(fmt.Sprintf("failed to an HTTP template from %s : HTTP %d", t.Http.URL, resp.StatusCode))
+			}
 
 		}
 
@@ -95,13 +104,15 @@ func (t *podTemplate) prepareTemplate(workingDir string) *template.Template {
 		if err != nil {
 			if _, ok := err.(*os.PathError); ok && t.File.Fallback != nil {
 				return t.File.Fallback.prepareTemplate(workingDir)
+			} else {
+				panic(fmt.Sprintf("failed to render a file template at %s : %s", t.File.Path, err.Error()))
 			}
 		}
 
 	}
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to render a template : %s\n%+v", err.Error(), t))
 	}
 
 	return tmpl
