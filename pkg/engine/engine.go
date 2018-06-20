@@ -21,7 +21,7 @@ func NewEngine() (*Engine, error) {
 }
 
 func getDockerClient() (*docker.Client, error) {
-	cli, err := docker.NewClientWithOpts(docker.WithVersion(""))
+	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(""))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func getDockerClient() (*docker.Client, error) {
 	// close
 	cli.Close()
 	// and reopen with the actual API version
-	cli, err = docker.NewClientWithOpts(docker.WithVersion(version.APIVersion))
+	cli, err = docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(version.APIVersion))
 	if err != nil {
 		return nil, err
 	}
