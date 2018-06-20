@@ -12,7 +12,7 @@ func NewEngineWithDockerClient(client *docker.Client) *Engine {
 }
 
 func NewEngine() (*Engine, error) {
-	cli, err := getDockerClient()
+	cli, err := newDockerClient()
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func NewEngine() (*Engine, error) {
 	return NewEngineWithDockerClient(cli), nil
 }
 
-func getDockerClient() (*docker.Client, error) {
+func newDockerClient() (*docker.Client, error) {
 	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(""))
 	if err != nil {
 		return nil, err

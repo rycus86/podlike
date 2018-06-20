@@ -46,7 +46,7 @@ func (s *Server) handleRequests() {
 			continue
 		}
 
-		conn.Write([]byte(GetState()))
+		conn.Write([]byte(State()))
 		conn.Close()
 	}
 }

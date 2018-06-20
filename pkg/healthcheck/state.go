@@ -59,7 +59,7 @@ func Initialize(component string, state int) {
 	currentStates[component] = state
 }
 
-func GetState() string {
+func State() string {
 	return getStateName(getCurrentState())
 }
 
