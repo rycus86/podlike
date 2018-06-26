@@ -175,6 +175,22 @@ services:
 
 Have a look at the [documentation](https://github.com/rycus86/podlike/blob/master/docs/Templates.md) to see what you can do with templates, then check out the [podtemplate](https://github.com/rycus86/podlike/tree/master/scripts) wrapper script that helps you automating the generation of templated stacks - or even deploying them in a single step.
 
+### HTTPS templates
+
+A note on HTTPS if you're using it to fetch the templates from a server, or mabye from GitHub, chances are, you'd need the remote call to verify the certificates in the response. The Docker image is based on `scratch`, which only includes the application binary, so the verification would likely fail. To add the SSL certs, you can extend the image to include the necessary certificates, or disable the verification, though that is __insecure__. You can add in the certificates like this for example:
+
+```
+FROM debian as builder
+
+RUN apt-get update && apt-get install -y ca-certificates
+
+FROM rycus86/podlike  # best to use a specific version though
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+```
+
+If you have private certificates, you can potentially add the to the `builder` image, run the certificate update, then copy the necessary files into the target image in a similar way.
+
 ## Volumes
 
 To share the controller's volumes with the components, the ones Swarm attached to the task, you have two options:
