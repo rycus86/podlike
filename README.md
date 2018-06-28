@@ -5,6 +5,7 @@ An attempt at managing co-located containers (like in a Pod in Kubernetes) mainl
 - [Use-cases](#use-cases)
 - [Configuration](#configuration)
 - [Templates](#templates)
+    - [HTTPS templates](#https-templates)
 - [Volumes](#volumes)
 - [Dragons!](#dragons)
 - [Work in progress](#work-in-progress)
