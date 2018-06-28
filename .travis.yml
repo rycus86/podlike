@@ -15,7 +15,7 @@ jobs:
         - npm install -g snyk
       script:
         - go test ./... -v -cover -covermode=count -coverprofile=c.out
-      after_script:
+      after_success:
         # upload coverage stats
         - $GOPATH/bin/goveralls -coverprofile=c.out -service=travis-ci || exit 0
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT || exit 0
