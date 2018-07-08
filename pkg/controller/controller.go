@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"fmt"
 	dtc "github.com/docker/docker/api/types/container"
 	"github.com/rycus86/podlike/pkg/component"
 	"github.com/rycus86/podlike/pkg/engine"
@@ -9,6 +10,23 @@ import (
 	"io/ioutil"
 	"strings"
 )
+
+func (c *Client) GetInitComponents() ([]*component.Component, error) {
+	var components []*component.Component
+
+	if initConfigs, ok := c.container.Config.Labels["pod.init.components"]; ok {
+		err := yaml.UnmarshalStrict([]byte(initConfigs), &components)
+		if err != nil {
+			return nil, err
+		}
+
+		for idx, comp := range components {
+			comp.Initialize(fmt.Sprintf("init-%d", idx+1), c, c.engine)
+		}
+	}
+
+	return components, nil
+}
 
 func (c *Client) GetComponents() ([]*component.Component, error) {
 	var components []*component.Component
