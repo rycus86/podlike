@@ -39,6 +39,8 @@ You may want to always deploy an application with a supporting application, a si
 
 *See also the [sidecar example](https://github.com/rycus86/podlike/tree/master/examples/sidecar)*
 
+There's another variation of this in the [sidecar-init example](https://github.com/rycus86/podlike/tree/master/examples/sidecar-init) folder that either uses `depends_on` or an [init container](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/) to set up components in the *pod*.
+
 2. Signals
 
 By putting containers in the same PID namespace, you send UNIX signals from one to another. Maybe an internal-only small webapp, that sends a SIGHUP to Nginx when it receives a reload request.
