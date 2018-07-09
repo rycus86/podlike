@@ -4,6 +4,7 @@
 - [Top-level extension](#top-level-extension)
     - [Template definition types](#template-definition-types)
     - [Controller templates](#controller-templates)
+    - [Init component templates](#init-component-templates)
     - [Main component templates](#main-component-templates)
     - [Additional component templates](#additional-component-templates)
     - [Copy templates](#copy-templates)
@@ -206,6 +207,28 @@ x-podlike:
 The name of the root property in the generated string doesn't matter, it will be replaced by the actual name of the service as given in the stack YAML. The template engine also copies over most of the properties from the original service definition, unless they are added by the templates, see these in the `mergedPodKeys` in the [merge.go](https://github.com/rycus86/podlike/blob/master/pkg/template/merge.go) source file.
 
 Each of the templates given here must output a YAML compatible string with a single root property.
+
+### Init component templates
+
+The `init` templates generate *component* definitions for containers that run to completion sequentially before the main component and any any additional ones are started, similarly to [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/) in Kubernetes. When using Podlike directly with labels, you can define them as a YAML string containing a list of components, however with the templated approach you can define them as a list of maps.
+
+```yaml
+x-podlike:
+  example:
+    init:
+      - inline:
+          example:
+            image: init/files
+            command: >
+              --dir /etc/shared/files
+      - inline:
+          component:
+            image: init/config
+            environment:
+              TARGET: /var/conf
+```
+
+The name of component doesn't matter in the definition, the target string won't contain them. As mentioned above, these containers will run one-by-one, and each of them need to finish successfully, with exit code `0`.
 
 ### Main component templates
 

@@ -36,6 +36,10 @@ func parseHealthcheckTest(value interface{}) ([]string, error) {
 }
 
 func (c *Component) initHealthCheckingIfNecessary() error {
+	if c.disableHealthChecking {
+		return nil
+	}
+
 	hasHealthcheck, err := c.hasHealthcheck()
 	if err != nil {
 		return err
@@ -50,4 +54,8 @@ func (c *Component) initHealthCheckingIfNecessary() error {
 
 func (c *Component) hasHealthcheck() (bool, error) {
 	return c.container.Config.Healthcheck != nil && c.container.Config.Healthcheck.Test != nil, nil
+}
+
+func (c *Component) DisableHealthChecking() {
+	c.disableHealthChecking = true
 }

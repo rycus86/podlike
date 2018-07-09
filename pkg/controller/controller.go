@@ -21,6 +21,7 @@ func (c *Client) GetInitComponents() ([]*component.Component, error) {
 		}
 
 		for idx, comp := range components {
+			comp.DisableHealthChecking()
 			comp.Initialize(fmt.Sprintf("init-%d", idx+1), c, c.engine)
 		}
 	}

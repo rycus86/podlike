@@ -79,6 +79,9 @@ type Component struct {
 	// the name and container ID set in runtime
 	Name      string               `yaml:"-"`
 	container *types.ContainerJSON `yaml:"-"`
+
+	// forcibly disable health-checks (for init components)
+	disableHealthChecking bool `yaml:"-"`
 }
 
 type Healthcheck struct {

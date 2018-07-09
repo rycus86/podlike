@@ -137,9 +137,11 @@ func executeTransformers(tc *transformConfiguration) (string, string) {
 	return converted[0].Name, comp
 }
 
-// TODO
+// Renders the init templates into an array of component definitions.
+// The result array is then converted into a single YAML string for
+// the single `pod.init.components` optional label.
 func executeInitTemplates(tc *transformConfiguration) string {
-	var components []string
+	var components []types.ServiceConfig
 
 	for _, tmpl := range tc.Init {
 		rendered := tmpl.render(tc)
@@ -150,9 +152,7 @@ func executeInitTemplates(tc *transformConfiguration) string {
 		}
 
 		for _, comp := range convertToServices(rendered, tc.Session.WorkingDir) {
-			item := convertToYaml(comp)
-
-			components = append(components, item)
+			components = append(components, comp)
 		}
 	}
 
