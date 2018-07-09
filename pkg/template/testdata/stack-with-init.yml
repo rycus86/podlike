@@ -1,0 +1,28 @@
+version: '3.5'
+services:
+
+  with-single-init:
+    image: sample/init1
+    x-podlike:
+      init:
+        inline:
+          init-component:
+            image: custom/init
+            labels:
+              init.test: single
+
+  with-multiple-init:
+    image: sample/init2
+    x-podlike:
+      init:
+        - inline:
+            init-comp:
+              image: init/first
+              labels:
+                init.test: multi.1
+        - inline:
+            init-comp:
+              image: init/second
+              labels:
+                init.test: multi.2
+

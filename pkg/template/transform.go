@@ -26,6 +26,10 @@ func Transform(inputFiles ...string) string {
 			podController.Labels["pod.component."+cName] = component
 		}
 
+		if initConfig := executeInitTemplates(&config); initConfig != "" {
+			podController.Labels["pod.init.components"] = initConfig
+		}
+
 		for cName, cp := range executeCopyTemplates(&config) {
 			podController.Labels["pod.copy."+cName] = cp
 		}
@@ -131,6 +135,32 @@ func executeTransformers(tc *transformConfiguration) (string, string) {
 	comp = insertDependsOnConfig(comp, servicesWithDependsOn, converted[0].Name)
 
 	return converted[0].Name, comp
+}
+
+// TODO
+func executeInitTemplates(tc *transformConfiguration) string {
+	var components []string
+
+	for _, tmpl := range tc.Init {
+		rendered := tmpl.render(tc)
+		if len(rendered) != 1 {
+			panic(fmt.Sprintf(
+				"init templates can only define a single component, but we got %d\n%+v",
+				len(rendered), rendered))
+		}
+
+		for _, comp := range convertToServices(rendered, tc.Session.WorkingDir) {
+			item := convertToYaml(comp)
+
+			components = append(components, item)
+		}
+	}
+
+	if len(components) == 0 {
+		return ""
+	} else {
+		return convertToYaml(components)
+	}
 }
 
 // Renders all the definitions from all the listed templates, and merges them into

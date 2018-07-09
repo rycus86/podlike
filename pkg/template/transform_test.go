@@ -279,6 +279,34 @@ func TestTransform_CustomController(t *testing.T) {
 		})
 }
 
+func TestTransform_WithInit(t *testing.T) {
+	output := Transform("testdata/stack-with-init.yml")
+	verifyTemplatedComponent(t, output, "with-single-init", "app",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/init1"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return hasInitComponent(s, 0, func(ic *component.Component) bool {
+				return ic.Image == "custom/init" && hasLabel("init.test", "single", ic.Labels)
+			})
+		})
+
+	verifyTemplatedComponent(t, output, "with-multiple-init", "app",
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return c.Image == "sample/init2"
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return hasInitComponent(s, 0, func(ic *component.Component) bool {
+				return ic.Image == "init/first" && hasLabel("init.test", "multi.1", ic.Labels)
+			})
+		},
+		func(c *component.Component, s *types.ServiceConfig) bool {
+			return hasInitComponent(s, 1, func(ic *component.Component) bool {
+				return ic.Image == "init/second" && hasLabel("init.test", "multi.2", ic.Labels)
+			})
+		})
+}
+
 func TestTransform_Defaults(t *testing.T) {
 	output := Transform("testdata/stack-with-minimal-templates.yml")
 	verifyTemplatedComponent(t, output, "minimal", "app",
@@ -354,6 +382,29 @@ func verifyTemplatedComponent(
 				idx+1, serviceName, service))
 		}
 	}
+}
+
+func hasInitComponent(s *types.ServiceConfig, index int, verify func(ic *component.Component) bool) bool {
+	definition, ok := s.Labels["pod.init.components"]
+	if !ok {
+		return false
+	}
+
+	var items []string
+	if err := yaml.Unmarshal([]byte(definition), &items); err != nil {
+		return false
+	}
+
+	if len(items) <= index {
+		return false
+	}
+
+	var comp component.Component
+	if err := yaml.Unmarshal([]byte(items[index]), &comp); err != nil {
+		return false
+	}
+
+	return verify(&comp)
 }
 
 func hasLabel(name, value string, labels interface{}) bool {

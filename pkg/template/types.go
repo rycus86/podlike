@@ -15,6 +15,7 @@ type transformSession struct {
 type transformConfiguration struct {
 	Pod         []podTemplate
 	Transformer []podTemplate
+	Init        []podTemplate
 	Templates   []podTemplate
 	Copy        []podTemplate
 
