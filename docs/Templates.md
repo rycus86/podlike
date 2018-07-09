@@ -102,6 +102,7 @@ For each service, we can define `pod` templates, `transformer` templates, `templ
 x-podlike:
   svc1:
     pod:
+    init:
     transformer:
     templates:
     copy:
@@ -112,13 +113,13 @@ x-podlike:
   args:
 ```
 
-Every field is optional to use, and you can use a single template or a list of them for `pod`, `transformer`, `templates` or `copy`. If multiple templates are given for a single type, they will be merged together, in order - see more details below at [Template merging](#template-merging).
+Every field is optional to use, and you can use a single template or a list of them for `pod`, `init`, `transformer`, `templates` or `copy`. If multiple templates are given for a single type, they will be merged together (except for `init`), in order - see more details below at [Template merging](#template-merging).
 
 The example above would define templates to use on the `svc1` and `svc2` services, plus specific arguments for each service, as well as additional global arguments. See which template is used for what below, but first, let's have a quick overview of what types of parameters they accept.
 
 ### Template definition types
 
-All 4 types of definitions accept either a single item, or a list of items. An item can be:
+All 5 types of definitions accept either a single item, or a list of items. An item can be:
 
 1. A simple string
 
