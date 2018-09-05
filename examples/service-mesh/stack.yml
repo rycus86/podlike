@@ -123,7 +123,7 @@ services:
   consul:
     image: consul
     environment:
-      CONSUL_BIND_INTERFACE: eth2
+      CONSUL_BIND_INTERFACE: eth1
     ports:
       - 8500:8500
 
