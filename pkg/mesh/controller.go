@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/rycus86/docker-filter/pkg/connect"
-	"github.com/rycus86/podlike/pkg/convert"
 	"github.com/rycus86/podlike/pkg/template"
 	"log"
 	"net"
@@ -41,14 +40,14 @@ func TestMe() {
 
 				name := req.Name
 				req.Name = "app"
-				svc := convert.SwarmSpecToComposeService(req)
+				svc := convertSwarmSpecToComposeService(req)
 
 				ts := template.NewSession("cmd/mesh/for-mesh.yml")
 				ts.ReplaceService(&svc)
 				ts.Execute()
 				ts.Project.Services[0].Name = name
 
-				convert.MergeComposeServiceIntoSwarmSpec(ts.Project.Services[0], req)
+				mergeComposeServiceIntoSwarmSpec(ts.Project.Services[0], req)
 
 				return req
 			}))
