@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	interp "github.com/docker/cli/cli/compose/interpolation"
 	"github.com/docker/cli/cli/compose/schema"
 	"github.com/docker/cli/cli/compose/template"
 	"github.com/docker/cli/cli/compose/types"
@@ -21,6 +22,16 @@ import (
 	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
+
+// Options supported by Load
+type Options struct {
+	// Skip schema validation
+	SkipValidation bool
+	// Skip interpolation
+	SkipInterpolation bool
+	// Interpolation options
+	Interpolate *interp.Options
+}
 
 // ParseYAML reads the bytes from a file, parses the bytes into a mapping
 // structure, and returns it.
@@ -41,12 +52,25 @@ func ParseYAML(source []byte) (map[string]interface{}, error) {
 }
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(configDetails types.ConfigDetails) (*types.Config, error) {
+func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.Config, error) {
 	if len(configDetails.ConfigFiles) < 1 {
 		return nil, errors.Errorf("No files specified")
 	}
 
+	opts := &Options{
+		Interpolate: &interp.Options{
+			Substitute:      template.Substitute,
+			LookupValue:     configDetails.LookupEnv,
+			TypeCastMapping: interpolateTypeCastMapping,
+		},
+	}
+
+	for _, op := range options {
+		op(opts)
+	}
+
 	configs := []*types.Config{}
+	var err error
 
 	for _, file := range configDetails.ConfigFiles {
 		configDict := file.Config
@@ -62,14 +86,17 @@ func Load(configDetails types.ConfigDetails) (*types.Config, error) {
 			return nil, err
 		}
 
-		var err error
-		configDict, err = interpolateConfig(configDict, configDetails.LookupEnv)
-		if err != nil {
-			return nil, err
+		if !opts.SkipInterpolation {
+			configDict, err = interpolateConfig(configDict, *opts.Interpolate)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		if err := schema.Validate(configDict, configDetails.Version); err != nil {
-			return nil, err
+		if !opts.SkipValidation {
+			if err := schema.Validate(configDict, configDetails.Version); err != nil {
+				return nil, err
+			}
 		}
 
 		cfg, err := loadSections(configDict, configDetails)
@@ -147,6 +174,7 @@ func loadSections(config map[string]interface{}, configDetails types.ConfigDetai
 			return nil, err
 		}
 	}
+	cfg.Extras = getExtras(config)
 	return &cfg, nil
 }
 
@@ -237,11 +265,13 @@ func getServices(configDict map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func transform(source map[string]interface{}, target interface{}) error {
+// Transform converts the source map into the target struct with compose types transformer
+// and the specified transformers if any.
+func Transform(source map[string]interface{}, target interface{}, additionalTransformers ...Transformer) error {
 	data := mapstructure.Metadata{}
 	config := &mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			createTransformHook(),
+			createTransformHook(additionalTransformers...),
 			mapstructure.StringToTimeDurationHookFunc()),
 		Result:   target,
 		Metadata: &data,
@@ -253,7 +283,13 @@ func transform(source map[string]interface{}, target interface{}) error {
 	return decoder.Decode(source)
 }
 
-func createTransformHook() mapstructure.DecodeHookFuncType {
+// Transformer defines a map to type transformer
+type Transformer struct {
+	TypeOf reflect.Type
+	Func   func(interface{}) (interface{}, error)
+}
+
+func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
 		reflect.TypeOf(types.External{}):                         transformExternal,
 		reflect.TypeOf(types.HealthCheckTest{}):                  transformHealthCheckTest,
@@ -273,6 +309,10 @@ func createTransformHook() mapstructure.DecodeHookFuncType {
 		reflect.TypeOf(types.HostsList{}):                        transformListOrMappingFunc(":", false),
 		reflect.TypeOf(types.ServiceVolumeConfig{}):              transformServiceVolumeConfig,
 		reflect.TypeOf(types.BuildConfig{}):                      transformBuildConfig,
+	}
+
+	for _, transformer := range additionalTransformers {
+		transforms[transformer.TypeOf] = transformer.Func
 	}
 
 	return func(_ reflect.Type, target reflect.Type, data interface{}) (interface{}, error) {
@@ -352,7 +392,7 @@ func LoadServices(servicesDict map[string]interface{}, workingDir string, lookup
 // the serviceDict is not validated if directly used. Use Load() to enable validation
 func LoadService(name string, serviceDict map[string]interface{}, workingDir string, lookupEnv template.Mapping) (*types.ServiceConfig, error) {
 	serviceConfig := &types.ServiceConfig{}
-	if err := transform(serviceDict, serviceConfig); err != nil {
+	if err := Transform(serviceDict, serviceConfig); err != nil {
 		return nil, err
 	}
 	serviceConfig.Name = name
@@ -364,7 +404,30 @@ func LoadService(name string, serviceDict map[string]interface{}, workingDir str
 	if err := resolveVolumePaths(serviceConfig.Volumes, workingDir, lookupEnv); err != nil {
 		return nil, err
 	}
+
+	serviceConfig.Extras = getExtras(serviceDict)
+
 	return serviceConfig, nil
+}
+
+func loadExtras(name string, source map[string]interface{}) map[string]interface{} {
+	if dict, ok := source[name].(map[string]interface{}); ok {
+		return getExtras(dict)
+	}
+	return nil
+}
+
+func getExtras(dict map[string]interface{}) map[string]interface{} {
+	extras := map[string]interface{}{}
+	for key, value := range dict {
+		if strings.HasPrefix(key, "x-") {
+			extras[key] = value
+		}
+	}
+	if len(extras) == 0 {
+		return nil
+	}
+	return extras
 }
 
 func updateEnvironment(environment map[string]*string, vars map[string]*string, lookupEnv template.Mapping) {
@@ -458,7 +521,7 @@ func transformUlimits(data interface{}) (interface{}, error) {
 // the source Dict is not validated if directly used. Use Load() to enable validation
 func LoadNetworks(source map[string]interface{}, version string) (map[string]types.NetworkConfig, error) {
 	networks := make(map[string]types.NetworkConfig)
-	err := transform(source, &networks)
+	err := Transform(source, &networks)
 	if err != nil {
 		return networks, err
 	}
@@ -479,6 +542,7 @@ func LoadNetworks(source map[string]interface{}, version string) (map[string]typ
 		case network.Name == "":
 			network.Name = name
 		}
+		network.Extras = loadExtras(name, source)
 		networks[name] = network
 	}
 	return networks, nil
@@ -494,7 +558,7 @@ func externalVolumeError(volume, key string) error {
 // the source Dict is not validated if directly used. Use Load() to enable validation
 func LoadVolumes(source map[string]interface{}, version string) (map[string]types.VolumeConfig, error) {
 	volumes := make(map[string]types.VolumeConfig)
-	if err := transform(source, &volumes); err != nil {
+	if err := Transform(source, &volumes); err != nil {
 		return volumes, err
 	}
 
@@ -521,6 +585,7 @@ func LoadVolumes(source map[string]interface{}, version string) (map[string]type
 		case volume.Name == "":
 			volume.Name = name
 		}
+		volume.Extras = loadExtras(name, source)
 		volumes[name] = volume
 	}
 	return volumes, nil
@@ -530,7 +595,7 @@ func LoadVolumes(source map[string]interface{}, version string) (map[string]type
 // the source Dict is not validated if directly used. Use Load() to enable validation
 func LoadSecrets(source map[string]interface{}, details types.ConfigDetails) (map[string]types.SecretConfig, error) {
 	secrets := make(map[string]types.SecretConfig)
-	if err := transform(source, &secrets); err != nil {
+	if err := Transform(source, &secrets); err != nil {
 		return secrets, err
 	}
 	for name, secret := range secrets {
@@ -538,7 +603,9 @@ func LoadSecrets(source map[string]interface{}, details types.ConfigDetails) (ma
 		if err != nil {
 			return nil, err
 		}
-		secrets[name] = types.SecretConfig(obj)
+		secretConfig := types.SecretConfig(obj)
+		secretConfig.Extras = loadExtras(name, source)
+		secrets[name] = secretConfig
 	}
 	return secrets, nil
 }
@@ -547,7 +614,7 @@ func LoadSecrets(source map[string]interface{}, details types.ConfigDetails) (ma
 // the source Dict is not validated if directly used. Use Load() to enable validation
 func LoadConfigObjs(source map[string]interface{}, details types.ConfigDetails) (map[string]types.ConfigObjConfig, error) {
 	configs := make(map[string]types.ConfigObjConfig)
-	if err := transform(source, &configs); err != nil {
+	if err := Transform(source, &configs); err != nil {
 		return configs, err
 	}
 	for name, config := range configs {
@@ -555,7 +622,9 @@ func LoadConfigObjs(source map[string]interface{}, details types.ConfigDetails) 
 		if err != nil {
 			return nil, err
 		}
-		configs[name] = types.ConfigObjConfig(obj)
+		configConfig := types.ConfigObjConfig(obj)
+		configConfig.Extras = loadExtras(name, source)
+		configs[name] = configConfig
 	}
 	return configs, nil
 }
