@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-func newSession(inputFiles ...string) *transformSession {
+func NewSession(inputFiles ...string) *transformSession {
 	if len(inputFiles) == 0 {
 		panic("No input files given")
 	}
@@ -19,12 +19,11 @@ func newSession(inputFiles ...string) *transformSession {
 		inputFiles = []string{os.Stdin.Name()}
 	}
 
+	configFiles := make([]types.ConfigFile, len(inputFiles), len(inputFiles))
+
 	session := &transformSession{
-		WorkingDir:  path.Dir(inputFiles[0]),
-		ConfigFiles: make([]types.ConfigFile, len(inputFiles), len(inputFiles)),
-
-		Args: map[string]interface{}{},
-
+		WorkingDir:     path.Dir(inputFiles[0]),
+		Args:           map[string]interface{}{},
 		Configurations: map[string]transformConfiguration{},
 	}
 
@@ -39,20 +38,20 @@ func newSession(inputFiles ...string) *transformSession {
 			panic(fmt.Sprintf("failed to parse a YAML : %s\n%s", err.Error(), string(contents)))
 		}
 
-		session.ConfigFiles[idx] = types.ConfigFile{
+		configFiles[idx] = types.ConfigFile{
 			Filename: path.Base(inputFile),
 			Config:   parsed,
 		}
 	}
 
-	session.prepareConfiguration()
+	session.prepareConfiguration(configFiles)
 
 	config, err := loader.Load(types.ConfigDetails{
-		ConfigFiles: session.ConfigFiles,
+		ConfigFiles: configFiles,
 		WorkingDir:  session.WorkingDir,
 	})
 	if err != nil {
-		panic(fmt.Sprintf("failed to load stack YAMLs into a config : %s\nfrom: %+v", err.Error(), session.ConfigFiles))
+		panic(fmt.Sprintf("failed to load stack YAMLs into a config : %s\nfrom: %+v", err.Error(), configFiles))
 	}
 
 	session.Project = config
@@ -67,4 +66,11 @@ func newSession(inputFiles ...string) *transformSession {
 	}
 
 	return session
+}
+
+func (ts *transformSession) ReplaceService(svc *types.ServiceConfig) {
+	ts.Project.Services = types.Services{*svc}
+	cfg := ts.Configurations[svc.Name]
+	cfg.Service = svc
+	ts.Configurations[svc.Name] = cfg
 }

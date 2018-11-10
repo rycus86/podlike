@@ -94,7 +94,7 @@ func TestDocs_ExampleYamlsAreValid(t *testing.T) {
 				}
 			}()
 
-			session := newSession(loadPath)
+			session := NewSession(loadPath)
 			if len(session.Configurations) == 0 {
 				t.Error("Invalid x-podlike configuration in", path)
 			}

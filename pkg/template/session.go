@@ -9,8 +9,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func (ts *transformSession) prepareConfiguration() {
-	for _, configFile := range ts.ConfigFiles {
+func (ts *transformSession) prepareConfiguration(configFiles []types.ConfigFile) {
+	for _, configFile := range configFiles {
 		ts.collectServiceLevelConfigurations(configFile)
 		ts.collectTopLevelConfigurations(configFile)
 	}
@@ -28,6 +28,10 @@ func (ts *transformSession) collectServiceLevelConfigurations(configFile types.C
 	}
 
 	for serviceName, definition := range mServices {
+		if definition == nil {
+			continue
+		}
+
 		mDefinition, ok := definition.(map[string]interface{})
 		if !ok {
 			panic(fmt.Sprintf(

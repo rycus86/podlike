@@ -9,12 +9,16 @@ import (
 // loads and transforms them using the templates,
 // and returns the resulting YAML as string.
 func Transform(inputFiles ...string) string {
-	session := newSession(inputFiles...)
+	session := NewSession(inputFiles...)
+	session.Execute()
+	return session.toYamlString()
+}
 
-	for serviceName, config := range session.Configurations {
+func (ts *transformSession) Execute() {
+	for serviceName, config := range ts.Configurations {
 		index := config.getServiceIndex()
 		if index < 0 {
-			panic(fmt.Sprintf("service index not found for %s\n%+v", serviceName, session.Project.Services))
+			panic(fmt.Sprintf("service index not found for %s\n%+v", serviceName, ts.Project.Services))
 		}
 
 		podController := executePodTemplates(&config)
@@ -34,10 +38,8 @@ func Transform(inputFiles ...string) string {
 			podController.Labels["pod.copy."+cName] = cp
 		}
 
-		session.Project.Services[index] = podController
+		ts.Project.Services[index] = podController
 	}
-
-	return session.toYamlString()
 }
 
 // Renders the main pod template for the controller, then merges the

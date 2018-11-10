@@ -1,6 +1,9 @@
 package template
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/docker/cli/cli/compose/loader"
+)
 
 func (tc *transformConfiguration) getServiceIndex() int {
 	for idx, service := range tc.Session.Project.Services {
@@ -13,16 +16,9 @@ func (tc *transformConfiguration) getServiceIndex() int {
 }
 
 func (tc *transformConfiguration) getServiceConfig() map[string]interface{} {
-	for _, configFile := range tc.Session.ConfigFiles {
-		if rawServices, ok := configFile.Config["services"]; !ok {
-			continue
-		} else {
-			services := rawServices.(map[string]interface{})
-			if svc, ok := services[tc.Service.Name]; ok {
-				return svc.(map[string]interface{})
-			}
-		}
+	if asMap, err := loader.ParseYAML([]byte(convertToYaml(tc.Service))); err != nil {
+		panic(fmt.Sprintf("failed to get service config for %s: %s", tc.Service.Name, err))
+	} else {
+		return asMap
 	}
-
-	panic(fmt.Sprintf("service not found: %s\n%+v", tc.Service.Name, tc.Session.ConfigFiles))
 }

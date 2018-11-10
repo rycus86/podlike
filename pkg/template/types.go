@@ -3,9 +3,8 @@ package template
 import "github.com/docker/cli/cli/compose/types"
 
 type transformSession struct {
-	WorkingDir  string
-	ConfigFiles []types.ConfigFile
-	Project     *types.Config
+	WorkingDir string
+	Project    *types.Config
 
 	Args map[string]interface{}
 

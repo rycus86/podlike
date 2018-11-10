@@ -204,7 +204,7 @@ func verifyParseResults(t *testing.T, input string, asserts ...parseAssert) {
 
 	f.WriteString(input)
 
-	session := newSession(f.Name())
+	session := NewSession(f.Name())
 
 	for idx, assert := range asserts {
 		if !assert(session.Configurations) {

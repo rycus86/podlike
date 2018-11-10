@@ -1,0 +1,12 @@
+version: '3.5'
+services:
+
+  app:
+    x-podlike:
+      pod:
+        inline: |
+          pod:
+            labels:
+              - sample.type=minimal
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
