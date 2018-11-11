@@ -1,7 +1,6 @@
 package mesh
 
 import (
-	"bytes"
 	"github.com/rycus86/docker-filter/pkg/connect"
 	"net"
 	"net/http"
@@ -63,34 +62,26 @@ func hasDockerCli() bool {
 	return cmd.Run() == nil
 }
 
-func runDockerCliCommand(args ...interface{}) {
+func runDockerCliCommand(args ...string) {
 	cmdArgs := []string{"-H", "tcp://" + mockListener.Addr().String()}
 
 	for _, arg := range args {
-		if s, ok := arg.(string); ok {
-			for _, part := range strings.Split(s, " ") {
-				if part == "$jsonFmt" {
-					part = "{{ json . }}"
-				}
-
-				cmdArgs = append(cmdArgs, part)
+		for _, part := range strings.Split(arg, " ") {
+			if part == "$jsonFmt" {
+				part = "{{ json . }}"
 			}
+
+			cmdArgs = append(cmdArgs, part)
 		}
 	}
 
 	cmd := exec.Command("docker", cmdArgs...)
 
-	wOut := new(bytes.Buffer)
-	wErr := new(bytes.Buffer)
-
-	cmd.Stdout = wOut
-	cmd.Stderr = wErr
-
-	for _, arg := range args {
-		if f, ok := arg.(func(cmd *exec.Cmd)); ok {
-			f(cmd)
-		}
-	}
+	//wOut := new(bytes.Buffer)
+	//wErr := new(bytes.Buffer)
+	//
+	//cmd.Stdout = wOut
+	//cmd.Stderr = wErr
 
 	cmd.Run()
 

@@ -9,4 +9,4 @@ services:
             labels:
               - test.id=simple-pod
             volumes:
-              - /var/run/docker.sock:/var/run/docker.sock
+              - /var/run/docker.sock:/var/run/docker.sock:ro
