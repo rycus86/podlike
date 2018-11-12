@@ -6,6 +6,11 @@ services:
       pod:
         inline: |
           pod:
+            ports:
+              - target: 7777
+                published: 9999
+                protocol: tcp
+                mode: ingress
             labels:
               test.id: simple-pod
               svc.replicas: "{{ .Service.Deploy.Replicas }}"

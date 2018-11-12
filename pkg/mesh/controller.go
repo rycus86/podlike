@@ -44,7 +44,7 @@ func processServiceCreateRequests(templateFile string) connect.FilterFunc {
 			ts.Execute()
 			ts.Project.Services[0].Name = name
 
-			mergeComposeServiceIntoSwarmSpec(ts.Project.Services[0], req)
+			mergeComposeServiceIntoSwarmSpec(&ts.Project.Services[0], req)
 
 			return req
 		})

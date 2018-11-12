@@ -281,7 +281,6 @@ func TestTransform_CustomController(t *testing.T) {
 
 func TestTransform_WithInit(t *testing.T) {
 	output := Transform("testdata/stack-with-init.yml")
-	fmt.Println(output)
 	verifyTemplatedComponent(t, output, "with-single-init", "app",
 		func(c *component.Component, s *types.ServiceConfig) bool {
 			return c.Image == "sample/init1"

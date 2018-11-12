@@ -2,6 +2,7 @@ package mesh
 
 import (
 	"encoding/json"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/rycus86/podlike/pkg/component"
 	"gopkg.in/yaml.v2"
@@ -39,18 +40,24 @@ func TestSimplePod(t *testing.T) {
 		if *serviceSpec.Mode.Replicated.Replicas != 4 {
 			t.Error("Unexpected number of replicas:", *serviceSpec.Mode.Replicated.Replicas)
 		}
-		if len(serviceSpec.EndpointSpec.Ports) != 1 {
+		if len(serviceSpec.EndpointSpec.Ports) != 2 {
 			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
-		} else if serviceSpec.EndpointSpec.Ports[0].PublishedPort != 8000 {
+		} else if serviceSpec.EndpointSpec.Ports[0].PublishedPort != 9999 {
 			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
-		} else if serviceSpec.EndpointSpec.Ports[0].TargetPort != 8080 {
+		} else if serviceSpec.EndpointSpec.Ports[0].TargetPort != 7777 {
+			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
+		} else if serviceSpec.EndpointSpec.Ports[1].PublishedPort != 8000 {
+			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
+		} else if serviceSpec.EndpointSpec.Ports[1].TargetPort != 8080 {
 			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
 		}
 
-		if len(spec.Mounts) != 1 {
+		if len(spec.Mounts) != 2 {
 			t.Error("Unexpected number of mounts:", spec.Mounts)
-		} else if spec.Mounts[0].Source != "/var/run/docker.sock" || spec.Mounts[0].Target != "/var/run/docker.sock" {
+		} else if spec.Mounts[0].Source != "/var/run/docker.sock" || spec.Mounts[0].Target != "/var/run/docker.sock" || spec.Mounts[0].Type != mount.TypeBind {
 			t.Error("Unexpected mount:", spec.Mounts[0])
+		} else if spec.Mounts[1].Source != "testvol" || spec.Mounts[1].Target != "/var/vol" || spec.Mounts[1].Type != mount.TypeVolume {
+			t.Error("Unexpected mount:", spec.Mounts[1])
 		}
 
 		if spec.Hostname != "simplepod" {

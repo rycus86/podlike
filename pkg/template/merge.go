@@ -13,7 +13,15 @@ func mergeServiceProperties(target, source map[string]interface{}, mergeKeys []s
 			continue
 		}
 
-		if _, alreadyExists := serviceConfig[key]; !alreadyExists {
+		if existing, alreadyExists := serviceConfig[key]; alreadyExists {
+			merger := map[string]interface{}{"$item": existing}
+			addition := map[string]interface{}{"$item": value}
+
+			mergeRecursively(merger, addition)
+
+			serviceConfig[key] = merger["$item"]
+
+		} else {
 			serviceConfig[key] = value
 		}
 	}
