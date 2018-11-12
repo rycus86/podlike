@@ -7,6 +7,7 @@ services:
         inline: |
           pod:
             labels:
-              - test.id=simple-pod
+              test.id: simple-pod
+              svc.replicas: "{{ .Service.Deploy.Replicas }}"
             volumes:
               - /var/run/docker.sock:/var/run/docker.sock:ro

@@ -36,6 +36,17 @@ func TestSimplePod(t *testing.T) {
 			t.Error("Unexpected image:", spec.Image)
 		}
 
+		if *serviceSpec.Mode.Replicated.Replicas != 4 {
+			t.Error("Unexpected number of replicas:", *serviceSpec.Mode.Replicated.Replicas)
+		}
+		if len(serviceSpec.EndpointSpec.Ports) != 1 {
+			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
+		} else if serviceSpec.EndpointSpec.Ports[0].PublishedPort != 8000 {
+			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
+		} else if serviceSpec.EndpointSpec.Ports[0].TargetPort != 8080 {
+			t.Error("Unexpected published ports:", serviceSpec.EndpointSpec.Ports)
+		}
+
 		if len(spec.Mounts) != 1 {
 			t.Error("Unexpected number of mounts:", spec.Mounts)
 		} else if spec.Mounts[0].Source != "/var/run/docker.sock" || spec.Mounts[0].Target != "/var/run/docker.sock" {
@@ -57,6 +68,8 @@ func TestSimplePod(t *testing.T) {
 		}
 
 		if spec.Labels["test.id"] != "simple-pod" {
+			t.Error("Unexpected labels:", spec.Labels)
+		} else if spec.Labels["svc.replicas"] != "4" {
 			t.Error("Unexpected labels:", spec.Labels)
 		} else if spec.Labels["pod.component.app"] == "" {
 			t.Fatal("Missing pod component label:", spec.Labels)
@@ -135,6 +148,8 @@ func TestSimplePod(t *testing.T) {
 		"--health-retries 3",
 		"--health-start-period 2s",
 		"--health-timeout 3ms",
+		"--publish 8000:8080",
+		"--replicas 4",
 		"--mount type=volume,source=testvol,target=/var/vol",
 		"--tty --detach --no-resolve-image",
 		"alpine sleep 60")
