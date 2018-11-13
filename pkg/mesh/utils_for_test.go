@@ -1,6 +1,8 @@
 package mesh
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/rycus86/docker-filter/pkg/connect"
 	"net"
 	"net/http"
@@ -25,6 +27,34 @@ func initMocks(handler func(http.ResponseWriter, *http.Request)) error {
 			w.WriteHeader(200)
 			w.Write([]byte("OK"))
 			return
+
+		} else if strings.HasSuffix(r.URL.Path, "/info") {
+			type Swarm struct {
+				NodeID           string
+				LocalNodeState   string
+				ControlAvailable bool
+			}
+			type Info struct {
+				Swarm Swarm
+			}
+
+			var buffer = new(bytes.Buffer)
+			json.NewEncoder(buffer).Encode(&Info{
+				Swarm: Swarm{
+					NodeID:           "abcdef",
+					LocalNodeState:   "active",
+					ControlAvailable: true,
+				},
+			})
+
+			w.Header().Add("Content-Type", "application/json")
+			w.Header().Add("Api-Version", "1.39")
+			w.Header().Add("Ostype", "linux")
+			w.Header().Add("Server", "Docker/18.09.0 (linux)")
+			w.WriteHeader(200)
+			w.Write(buffer.Bytes())
+			return
+
 		}
 
 		handler(w, r)

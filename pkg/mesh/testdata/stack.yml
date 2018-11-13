@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+
+  web:
+    image: python:2.7-alpine
+    command: >
+      python -m SimpleHTTPServer 8080
+
+  db:
+    image: mongo:4
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example

@@ -67,8 +67,8 @@ func convertSwarmSpecToComposeService(spec *swarm.ServiceSpec) types.ServiceConf
 		Configs:         swarmConfigsToCompose(spec.TaskTemplate.ContainerSpec.Configs),
 		CredentialSpec:  swarmCredentialsSpecToCompose(spec.TaskTemplate.ContainerSpec.Privileges),
 		Deploy:          swarmDeployToCompose(spec),
-		DNS:             types.StringList(spec.TaskTemplate.ContainerSpec.DNSConfig.Nameservers),
-		DNSSearch:       types.StringList(spec.TaskTemplate.ContainerSpec.DNSConfig.Search),
+		DNS:             types.StringList(swarmDnsArrayToCompose(spec.TaskTemplate.ContainerSpec.DNSConfig, "Nameservers")),
+		DNSSearch:       types.StringList(swarmDnsArrayToCompose(spec.TaskTemplate.ContainerSpec.DNSConfig, "Search")),
 		Entrypoint:      types.ShellCommand(spec.TaskTemplate.ContainerSpec.Command),
 		Environment:     swarmEnvironmentToCompose(spec.TaskTemplate.ContainerSpec.Env),
 		ExtraHosts:      swarmExtraHostsToCompose(spec.TaskTemplate.ContainerSpec.Hosts),
@@ -145,6 +145,21 @@ func swarmCredentialsSpecToCompose(privileges *swarm.Privileges) types.Credentia
 		}
 	}
 	return credentialSpec
+}
+
+func swarmDnsArrayToCompose(config *swarm.DNSConfig, field string) []string{
+	if config == nil {
+		return []string{}
+	}
+
+	switch field {
+	case "Nameservers":
+		return config.Nameservers
+	case "Search":
+		return config.Search
+	}
+
+	panic(fmt.Sprintf("invalid field: %s", field))
 }
 
 func swarmEnvironmentToCompose(env []string) types.MappingWithEquals {

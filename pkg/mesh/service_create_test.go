@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestSimplePod(t *testing.T) {
+func TestMeshSimplePod(t *testing.T) {
 	if ! hasDockerCli() {
 		t.Skip("Does not have access to the Docker CLI")
 	}
