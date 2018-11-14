@@ -3,6 +3,7 @@ package mesh
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/rycus86/docker-filter/pkg/connect"
 	"net"
 	"net/http"
@@ -15,6 +16,8 @@ var (
 	mockDockerServer *httptest.Server
 	mockListener     net.Listener
 	mockProxy        *connect.Proxy
+
+	mockEnableProcessLogging = false
 )
 
 func initMocks(handler func(http.ResponseWriter, *http.Request)) error {
@@ -107,23 +110,31 @@ func runDockerCliCommand(args ...string) {
 
 	cmd := exec.Command("docker", cmdArgs...)
 
-	//wOut := new(bytes.Buffer)
-	//wErr := new(bytes.Buffer)
-	//
-	//cmd.Stdout = wOut
-	//cmd.Stderr = wErr
+	if mockEnableProcessLogging {
 
-	cmd.Run()
+		wOut := new(bytes.Buffer)
+		wErr := new(bytes.Buffer)
 
-	//err := cmd.Run()
-	//
-	//stdout := wOut.String()
-	//stderr := wErr.String()
-	//
-	//fmt.Println("Run:", cmd.Args)
-	//fmt.Println("Err:", err)
-	//fmt.Println("StdOut:", stdout)
-	//fmt.Println("StdErr:", stderr)
+		cmd.Stdout = wOut
+		cmd.Stderr = wErr
+
+		err := cmd.Run()
+
+		stdout := wOut.String()
+		stderr := wErr.String()
+
+		fmt.Println("Run:", cmd.Args)
+		fmt.Println("Err:", err)
+		fmt.Println("StdOut:", stdout)
+		fmt.Println("StdErr:", stderr)
+
+	} else {
+
+		cmd.Run()
+
+	}
+
+	mockEnableProcessLogging = false
 
 	return
 }
