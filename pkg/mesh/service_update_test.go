@@ -167,7 +167,6 @@ func TestMeshServiceUpdate(t *testing.T) {
 	}
 	defer closeMocks()
 
-	// TODO should have a filter on /create as well for this test
 	mockProxy.Handle("/services/(create|update)", processServiceCreateRequests("testdata/simple-pod.yml"))
 
 	mockEnableProcessLogging = true
