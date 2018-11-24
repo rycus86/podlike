@@ -74,6 +74,7 @@ func TestMeshStackDeploy(t *testing.T) {
 
 	mockProxy.Handle("/services/create", processServiceCreateRequests("testdata/simple-pod.yml"))
 
+	mockEnableProcessLogging = true
 	runDockerCliCommand(
 		"stack deploy",
 		"-c testdata/stack.yml",
