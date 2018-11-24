@@ -57,7 +57,7 @@ func TestMeshStackDeploy(t *testing.T) {
 			t.Fatal("Failed to unmarshal pod component:", err)
 		}
 
-		if serviceSpec.Name == "sample_web" && comp.Image != "python:2.7-alpine" {
+		if serviceSpec.Name == "sample_web" && comp.Image != "python:2.8.x" {
 			t.Error("Unexpected component image:", comp.Image)
 		} else if serviceSpec.Name == "sample_db" && comp.Image != "mongo:4" {
 			t.Error("Unexpected component image:", comp.Image)
@@ -74,6 +74,7 @@ func TestMeshStackDeploy(t *testing.T) {
 
 	mockProxy.Handle("/services/create", processServiceCreateRequests("testdata/simple-pod.yml"))
 
+	mockEnableProcessLogging = true
 	runDockerCliCommand(
 		"stack deploy",
 		"-c testdata/stack.yml",

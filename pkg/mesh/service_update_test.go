@@ -23,8 +23,6 @@ func TestMeshServiceUpdate(t *testing.T) {
 	var svcBody = new(bytes.Buffer)
 
 	if err := initMocks(func(writer http.ResponseWriter, request *http.Request) {
-		t.Log("upd:", request.Method, request.URL)
-
 		if strings.HasSuffix(request.URL.Path, "/networks") {
 			writer.Header().Add("Content-Type", "application/json")
 			writer.WriteHeader(200)
@@ -169,7 +167,6 @@ func TestMeshServiceUpdate(t *testing.T) {
 
 	mockProxy.Handle("/services/(create|update)", processServiceCreateRequests("testdata/simple-pod.yml"))
 
-	mockEnableProcessLogging = true
 	runDockerCliCommand(
 		"service create",
 		"--name sample-svc",
@@ -178,7 +175,6 @@ func TestMeshServiceUpdate(t *testing.T) {
 		"--publish 5000:5000",
 		"new/image:v1 run")
 
-	mockEnableProcessLogging = true
 	runDockerCliCommand(
 		"service update sample-svc",
 		"--replicas 3",
