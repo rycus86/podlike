@@ -63,12 +63,12 @@ func mergeComposeServiceIntoSwarmSpec(svc *types.ServiceConfig, spec *swarm.Serv
 
 	spec.Name = svc.Name
 	spec.TaskTemplate.ContainerSpec.Args = svc.Command
+	spec.TaskTemplate.ContainerSpec.Configs = composeConfigsToSwarm(svc)
 	spec.TaskTemplate.ContainerSpec.DNSConfig = &swarm.DNSConfig{
 		Nameservers: svc.DNS,
 		Search:      svc.DNSSearch,
 	}
 	spec.TaskTemplate.ContainerSpec.Command = svc.Entrypoint
-	spec.TaskTemplate.ContainerSpec.Configs = composeConfigsToSwarm(svc)
 	spec.TaskTemplate.ContainerSpec.Hosts = composeExtraHostsToSwarm(svc)
 	spec.TaskTemplate.ContainerSpec.Hostname = svc.Hostname
 	spec.TaskTemplate.ContainerSpec.Image = svc.Image
@@ -125,15 +125,35 @@ func composeExtraHostsToSwarm(svc *types.ServiceConfig) []string {
 }
 
 func composePortsToSwarm(svc *types.ServiceConfig) []swarm.PortConfig {
-	var ports []swarm.PortConfig
+	var (
+		ports     []swarm.PortConfig
+		published []uint32
+	)
+
+	isDuplicate := func(p types.ServicePortConfig) bool {
+		for _, pp := range published {
+			if pp == p.Published {
+				return true
+			}
+		}
+
+		return false
+	}
 
 	for _, p := range svc.Ports {
+		// filter out entries publishing the same port, perhaps by running a template twice
+		if isDuplicate(p) {
+			continue
+		}
+
 		ports = append(ports, swarm.PortConfig{
 			PublishMode:   swarm.PortConfigPublishMode(p.Mode),
 			TargetPort:    p.Target,
 			PublishedPort: p.Published,
 			Protocol:      swarm.PortConfigProtocol(p.Protocol),
 		})
+
+		published = append(published, p.Published)
 	}
 
 	return ports
