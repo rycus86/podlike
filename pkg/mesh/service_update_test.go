@@ -13,7 +13,7 @@ import (
 )
 
 func TestMeshServiceUpdate(t *testing.T) {
-	if ! hasDockerCli() {
+	if !hasDockerCli() {
 		t.Skip("Does not have access to the Docker CLI")
 	}
 
@@ -49,7 +49,7 @@ func TestMeshServiceUpdate(t *testing.T) {
 			return
 		}
 
-		assertHasPorts := func (published ...uint32) bool {
+		assertHasPorts := func(published ...uint32) bool {
 			for _, want := range published {
 				ok := false
 
@@ -158,6 +158,10 @@ func TestMeshServiceUpdate(t *testing.T) {
 			t.Error("Unexpected component image:", comp.Image)
 		}
 
+		if labels := comp.Labels.(map[interface{}]interface{}); labels["pod.component.app"] != nil {
+			t.Error("Unwanted podlike label on the components:", labels)
+		}
+
 		functionCalled = true
 
 	}); err != nil {
@@ -165,12 +169,13 @@ func TestMeshServiceUpdate(t *testing.T) {
 	}
 	defer closeMocks()
 
-	mockProxy.Handle("/services/(create|update)", processServiceCreateRequests("testdata/simple-pod.yml"))
+	setupFilters(mockProxy, "testdata/simple-pod.yml")
 
 	runDockerCliCommand(
 		"service create",
 		"--name sample-svc",
 		"--label init_label=start",
+		"--container-label label_type=container",
 		"--publish 8080:8080",
 		"--publish 5000:5000",
 		"new/image:v1 run")

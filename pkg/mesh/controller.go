@@ -2,50 +2,45 @@ package mesh
 
 import (
 	"fmt"
-	"github.com/docker/docker/api/types/swarm"
 	"github.com/rycus86/docker-filter/pkg/connect"
-	"github.com/rycus86/podlike/pkg/template"
 	"net"
-	"runtime/debug"
 )
 
-func TestMe() {
-	listener, _ := net.Listen("tcp", ":8888")
-	defer listener.Close()
-
-	p := connect.NewProxy(func() (conn net.Conn, e error) {
-		return net.Dial("unix", "/var/run/docker.sock")
-	})
-	p.AddListener("", listener)
-
-	p.Handle("/services/create", processServiceCreateRequests("cmd/mesh/for-mesh.yml"))
-
-	panic(p.Process())
+func StartMeshController(args ...string) {
+	config := configure(args...)
+	runController(config)
 }
 
-func processServiceCreateRequests(templateFile string) connect.FilterFunc {
-	return connect.FilterAsJson(func() connect.T { return &swarm.ServiceSpec{} },
-		func(r connect.T) connect.T {
-			defer func() {
-				if e := recover(); e != nil {
-					fmt.Println("oops:", e)
-					fmt.Println(string(debug.Stack()))
-				}
-			}()
+func runController(config *Configuration) {
+	var listeners []net.Listener
 
-			req := r.(*swarm.ServiceSpec)
+	defer func() {
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
-			name := req.Name
-			req.Name = "app"
-			svc := convertSwarmSpecToComposeService(req)
+	for _, listenAddress := range config.ListenAddresses {
+		network, address := parseNetworkAndAddress(listenAddress)
 
-			ts := template.NewSession(templateFile)
-			ts.ReplaceService(&svc)
-			ts.Execute()
-			ts.Project.Services[0].Name = name
+		if listener, err := net.Listen(network, address); err != nil {
+			panic(fmt.Errorf("failed to start listener: %s", err))
+		} else {
+			listeners = append(listeners, listener)
+		}
+	}
 
-			mergeComposeServiceIntoSwarmSpec(&ts.Project.Services[0], req)
+	engineNetwork, engineAddress := parseNetworkAndAddress(config.EngineConnection)
 
-			return req
-		})
+	proxy := connect.NewProxyForDockerCli(func() (net.Conn, error) {
+		return net.Dial(engineNetwork, engineAddress)
+	})
+
+	for idx, listener := range listeners {
+		proxy.AddListener(fmt.Sprintf("L%02d", idx+1), listener) // TODO prefix
+	}
+
+	setupFilters(proxy, config.Templates...)
+
+	panic(proxy.Process())
 }

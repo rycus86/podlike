@@ -69,7 +69,7 @@ func initMocks(handler func(http.ResponseWriter, *http.Request)) error {
 	}
 	mockListener = listener
 
-	proxy := connect.NewProxy(func() (net.Conn, error) {
+	proxy := connect.NewProxyForDockerCli(func() (net.Conn, error) {
 		return net.Dial(mockDockerServer.Listener.Addr().Network(), mockDockerServer.Listener.Addr().String())
 	})
 	proxy.AddListener("test", listener)

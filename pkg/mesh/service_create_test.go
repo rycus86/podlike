@@ -13,7 +13,7 @@ import (
 )
 
 func TestMeshSimplePod(t *testing.T) {
-	if ! hasDockerCli() {
+	if !hasDockerCli() {
 		t.Skip("Does not have access to the Docker CLI")
 	}
 
@@ -138,7 +138,7 @@ func TestMeshSimplePod(t *testing.T) {
 	}
 	defer closeMocks()
 
-	mockProxy.Handle("/services/create", processServiceCreateRequests("testdata/simple-pod.yml"))
+	setupFilters(mockProxy, "testdata/simple-pod.yml")
 
 	runDockerCliCommand(
 		"service create",

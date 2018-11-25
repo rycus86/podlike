@@ -131,11 +131,12 @@ func composePortsToSwarm(svc *types.ServiceConfig) []swarm.PortConfig {
 	)
 
 	isDuplicate := func(p types.ServicePortConfig) bool {
-		for _, pp := range published {
-			if pp == p.Published {
-				return true
-			}
-		}
+		// TODO looks like this is not needed after all?
+		//for _, pp := range published {
+		//	if pp == p.Published {
+		//		return true
+		//	}
+		//}
 
 		return false
 	}
@@ -184,8 +185,29 @@ func composeSecretsToSwarm(svc *types.ServiceConfig) []*swarm.SecretReference {
 
 func composeVolumesToSwarm(svc *types.ServiceConfig) []mount.Mount {
 	var mounts []mount.Mount
+	var addedMounts []string
+
+	addMount := func(m mount.Mount) {
+		mounts = append(mounts, m)
+		addedMounts = append(addedMounts, fmt.Sprintf("[%s]%s:%s", m.Type, m.Source, m.Target))
+	}
+	isDuplicate := func(v types.ServiceVolumeConfig) bool {
+		// TODO looks like this is not needed after all?
+		//for _, am := range addedMounts {
+		//	if am == fmt.Sprintf("[%s]%s:%s", v.Type, v.Source, v.Target) {
+		//		return true
+		//	}
+		//}
+
+		return false
+	}
 
 	for _, vol := range svc.Volumes {
+		// filter out entries describing the same volume, perhaps by running a template twice
+		if isDuplicate(vol) {
+			continue
+		}
+
 		var (
 			bindOptions   *mount.BindOptions
 			volumeOptions *mount.VolumeOptions
@@ -210,7 +232,7 @@ func composeVolumesToSwarm(svc *types.ServiceConfig) []mount.Mount {
 			}
 		}
 
-		mounts = append(mounts, mount.Mount{
+		addMount(mount.Mount{
 			Type:        mount.Type(vol.Type),
 			Source:      vol.Source,
 			Target:      vol.Target,

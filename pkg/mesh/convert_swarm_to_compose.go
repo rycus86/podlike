@@ -147,7 +147,7 @@ func swarmCredentialsSpecToCompose(privileges *swarm.Privileges) types.Credentia
 	return credentialSpec
 }
 
-func swarmDnsArrayToCompose(config *swarm.DNSConfig, field string) []string{
+func swarmDnsArrayToCompose(config *swarm.DNSConfig, field string) []string {
 	if config == nil {
 		return []string{}
 	}

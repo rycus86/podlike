@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/rycus86/podlike/pkg/config"
 	"github.com/rycus86/podlike/pkg/healthcheck"
+	"github.com/rycus86/podlike/pkg/mesh"
 	"github.com/rycus86/podlike/pkg/template"
 	"github.com/rycus86/podlike/pkg/version"
 	"os"
@@ -38,6 +39,10 @@ func Parse() *config.Configuration {
 		} else if os.Args[1] == "template" {
 
 			template.PrintTemplatedStack(os.Args[2:]...)
+			os.Exit(0)
+
+		} else if os.Args[1] == "mesh" {
+			mesh.StartMeshController(os.Args[2:]...)
 			os.Exit(0)
 
 		} else if os.Args[1] == "version" {
