@@ -11,6 +11,10 @@ type transformSession struct {
 	Configurations map[string]transformConfiguration
 }
 
+func (ts *transformSession) TODO_Set(name string, tc TC) {
+	ts.registerService(name, transformConfiguration(tc))
+}
+
 type transformConfiguration struct {
 	Pod         []podTemplate
 	Transformer []podTemplate
@@ -24,11 +28,17 @@ type transformConfiguration struct {
 	Service *types.ServiceConfig `yaml:"-" mapstructure:"-"`
 }
 
+type TC transformConfiguration
+
 type podTemplate struct {
 	File   *fileTemplate
 	Inline string
 	Http   *httpTemplate
+
+	IsDefault bool
 }
+
+type PT podTemplate
 
 type fileTemplate struct {
 	Path     string

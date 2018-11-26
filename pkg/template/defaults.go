@@ -23,6 +23,8 @@ pod:
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
 `, getTagForPod()),
+
+		IsDefault: true, // TODO
 	}
 }
 
@@ -41,5 +43,7 @@ func getDefaultTransformerTemplate() podTemplate {
 		Inline: `
 app:
   image: {{ .Service.Image }}`,
+
+		IsDefault: true, // TODO
 	}
 }

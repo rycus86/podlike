@@ -70,8 +70,10 @@ func processService(spec *swarm.ServiceSpec, templateFiles ...string) {
 		panic(err)
 	}
 
-	ts := template.NewSession(tmplFiles...)
-	name := spec.Name
+	ts := template.NewSession(tmplFiles...) // TODO maybe this needs to be told not to add default pod/transformers just yet
+	tc := template.TC{
+		Args: map[string]interface{}{},
+	}
 
 	for _, templateName := range strings.Split(spec.Labels["podlike.mesh.templates"], ",") {
 		tName := strings.TrimSpace(templateName)
@@ -79,25 +81,50 @@ func processService(spec *swarm.ServiceSpec, templateFiles ...string) {
 			tName = "default"
 		}
 
-		if _, ok := ts.Configurations[tName]; !ok {
+		if cfg, ok := ts.Configurations[tName]; !ok {
 			continue // skip non-existing configuration
+		} else {
+			for _, pod := range cfg.Pod {
+				if pod.IsDefault { // TODO
+					continue
+				}
+
+				tc.Pod = append(tc.Pod, pod)
+			}
+
+			for _, transformer := range cfg.Transformer {
+				if transformer.IsDefault { // TODO
+					continue
+				}
+
+				tc.Transformer = append(tc.Transformer, transformer)
+			}
+
+			tc.Init = append(tc.Init, cfg.Init...)
+			tc.Templates = append(tc.Templates, cfg.Templates...)
+			tc.Copy = append(tc.Copy, cfg.Copy...)
+
+			for key, value := range cfg.Args {
+				tc.Args[key] = value // TODO merge rules?
+			}
 		}
-
-		spec.Name = tName
-
-		svc := convertSwarmSpecToComposeService(spec)
-
-		// FIXME this does not work with two transformations
-		// -- perhaps we need to construct the template session for the service manually here
-
-		ts.ReplaceService(&svc)
-		ts.Execute()
-
-		changed := findServiceByName(ts.Project.Services, tName)
-		changed.Name = name
-
-		mergeComposeServiceIntoSwarmSpec(changed, spec)
 	}
+
+	name := spec.Name
+
+	spec.Name = "$svc"
+	svc := convertSwarmSpecToComposeService(spec)
+
+	tc.Service = &svc
+	ts.TODO_Set(spec.Name, tc) // TODO
+	ts.Project.Services = append(ts.Project.Services, svc)
+
+	ts.Execute()
+
+	changed := findServiceByName(ts.Project.Services, spec.Name)
+	changed.Name = name
+
+	mergeComposeServiceIntoSwarmSpec(changed, spec)
 
 	spec.Name = name
 }
