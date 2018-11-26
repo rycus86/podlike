@@ -44,7 +44,7 @@ func mergeComposeServiceIntoSwarmSpec(svc *types.ServiceConfig, spec *swarm.Serv
 	//x		//NetworkMode     string                           `mapstructure:"network_mode" yaml:"network_mode,omitempty"`
 	//TODO 	//Networks        map[string]*ServiceNetworkConfig `yaml:",omitempty"`
 	//x		//Pid             string                           `yaml:",omitempty"`
-	//TODO 	//Ports           []ServicePortConfig              `yaml:",omitempty"`
+	//✓		//Ports           []ServicePortConfig              `yaml:",omitempty"`
 	//x		//Privileged      bool                             `yaml:",omitempty"`
 	//✓		//ReadOnly        bool                             `mapstructure:"read_only" yaml:"read_only,omitempty"`
 	//x		//Restart         string                           `yaml:",omitempty"`
@@ -57,7 +57,7 @@ func mergeComposeServiceIntoSwarmSpec(svc *types.ServiceConfig, spec *swarm.Serv
 	//✓		//Tty             bool                             `mapstructure:"tty" yaml:"tty,omitempty"`
 	//x		//Ulimits         map[string]*UlimitsConfig        `yaml:",omitempty"`
 	//✓		//User            string                           `yaml:",omitempty"`
-	//TODO 	//Volumes         []ServiceVolumeConfig            `yaml:",omitempty"`
+	//✓		//Volumes         []ServiceVolumeConfig            `yaml:",omitempty"`
 	//✓		//WorkingDir      string                           `mapstructure:"working_dir" yaml:"working_dir,omitempty"`
 	//✓		//Isolation       string                           `mapstructure:"isolation" yaml:"isolation,omitempty"`
 
@@ -125,36 +125,15 @@ func composeExtraHostsToSwarm(svc *types.ServiceConfig) []string {
 }
 
 func composePortsToSwarm(svc *types.ServiceConfig) []swarm.PortConfig {
-	var (
-		ports     []swarm.PortConfig
-		published []uint32
-	)
-
-	isDuplicate := func(p types.ServicePortConfig) bool {
-		// TODO looks like this is not needed after all?
-		//for _, pp := range published {
-		//	if pp == p.Published {
-		//		return true
-		//	}
-		//}
-
-		return false
-	}
+	var ports []swarm.PortConfig
 
 	for _, p := range svc.Ports {
-		// filter out entries publishing the same port, perhaps by running a template twice
-		if isDuplicate(p) {
-			continue
-		}
-
 		ports = append(ports, swarm.PortConfig{
 			PublishMode:   swarm.PortConfigPublishMode(p.Mode),
 			TargetPort:    p.Target,
 			PublishedPort: p.Published,
 			Protocol:      swarm.PortConfigProtocol(p.Protocol),
 		})
-
-		published = append(published, p.Published)
 	}
 
 	return ports
@@ -185,29 +164,8 @@ func composeSecretsToSwarm(svc *types.ServiceConfig) []*swarm.SecretReference {
 
 func composeVolumesToSwarm(svc *types.ServiceConfig) []mount.Mount {
 	var mounts []mount.Mount
-	var addedMounts []string
-
-	addMount := func(m mount.Mount) {
-		mounts = append(mounts, m)
-		addedMounts = append(addedMounts, fmt.Sprintf("[%s]%s:%s", m.Type, m.Source, m.Target))
-	}
-	isDuplicate := func(v types.ServiceVolumeConfig) bool {
-		// TODO looks like this is not needed after all?
-		//for _, am := range addedMounts {
-		//	if am == fmt.Sprintf("[%s]%s:%s", v.Type, v.Source, v.Target) {
-		//		return true
-		//	}
-		//}
-
-		return false
-	}
 
 	for _, vol := range svc.Volumes {
-		// filter out entries describing the same volume, perhaps by running a template twice
-		if isDuplicate(vol) {
-			continue
-		}
-
 		var (
 			bindOptions   *mount.BindOptions
 			volumeOptions *mount.VolumeOptions
@@ -232,7 +190,7 @@ func composeVolumesToSwarm(svc *types.ServiceConfig) []mount.Mount {
 			}
 		}
 
-		addMount(mount.Mount{
+		mounts = append(mounts, mount.Mount{
 			Type:        mount.Type(vol.Type),
 			Source:      vol.Source,
 			Target:      vol.Target,

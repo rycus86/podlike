@@ -2,8 +2,16 @@ package mesh
 
 import (
 	"fmt"
+	"github.com/docker/cli/cli/compose/types"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/rycus86/docker-filter/pkg/connect"
+	"github.com/rycus86/podlike/pkg/template"
+	"io"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"os"
+	"strings"
 )
 
 func StartMeshController(args ...string) {
@@ -43,4 +51,112 @@ func runController(config *Configuration) {
 	setupFilters(proxy, config.Templates...)
 
 	panic(proxy.Process())
+}
+
+func processService(spec *swarm.ServiceSpec, templateFiles ...string) {
+	var tempFilesToRemove []string
+	defer func() {
+		for _, tf := range tempFilesToRemove {
+			os.Remove(tf)
+		}
+	}()
+
+	// TODO this might need caching to download remote templates
+	// TODO also timeouts, retries, etc.
+	tmplFiles, tempFiles, err := ensureTemplateFiles(templateFiles)
+	tempFilesToRemove = append(tempFilesToRemove, tempFiles...)
+
+	if err != nil {
+		panic(err)
+	}
+
+	ts := template.NewSession(tmplFiles...)
+	name := spec.Name
+
+	for _, templateName := range strings.Split(spec.Labels["podlike.mesh.templates"], ",") {
+		tName := strings.TrimSpace(templateName)
+		if len(tName) == 0 {
+			tName = "default"
+		}
+
+		if _, ok := ts.Configurations[tName]; !ok {
+			continue // skip non-existing configuration
+		}
+
+		spec.Name = tName
+
+		svc := convertSwarmSpecToComposeService(spec)
+
+		// FIXME this does not work with two transformations
+		// -- perhaps we need to construct the template session for the service manually here
+
+		ts.ReplaceService(&svc)
+		ts.Execute()
+
+		changed := findServiceByName(ts.Project.Services, tName)
+		changed.Name = name
+
+		mergeComposeServiceIntoSwarmSpec(changed, spec)
+	}
+
+	spec.Name = name
+}
+
+func findServiceByName(services types.Services, name string) *types.ServiceConfig {
+	for _, svc := range services {
+		if svc.Name == name {
+			return &svc
+		}
+	}
+
+	return nil
+}
+
+func ensureTemplateFiles(templateFiles []string) ([]string, []string, error) {
+	var templates []string
+	var tempFiles []string
+	var templateError error
+
+	for _, tmpl := range templateFiles {
+		if fi, err := os.Stat(tmpl); err == nil && !fi.IsDir() {
+			templates = append(templates, tmpl)
+			continue
+		}
+
+		// TODO maybe the template engine should support URLs directly
+		if strings.HasPrefix(strings.ToLower(tmpl), "http://") ||
+			strings.HasPrefix(strings.ToLower(tmpl), "https://") {
+
+			if resp, err := http.Get(tmpl); err != nil {
+				templateError = fmt.Errorf("failed to fetch a template from %s: %s", tmpl, err)
+			} else if resp.StatusCode != 200 {
+				resp.Body.Close()
+				templateError = fmt.Errorf("failed to fetch a template from %s: HTTP %d", tmpl, resp.StatusCode)
+			} else if f, err := ioutil.TempFile("", "podlike.mesh.*.yml"); err != nil {
+				resp.Body.Close()
+
+				templateError = fmt.Errorf("failed to create a temporary file for %s: %s", tmpl, err)
+			} else if _, err := io.Copy(f, resp.Body); err != nil {
+				os.Remove(f.Name())
+				resp.Body.Close()
+
+				templateError = fmt.Errorf("failed to write temporary file at %s for %s: %s", f.Name(), tmpl, err)
+			} else {
+				resp.Body.Close()
+
+				templates = append(templates, f.Name())
+				tempFiles = append(tempFiles, f.Name())
+			}
+
+		} else {
+			templateError = fmt.Errorf("template not found at %s", tmpl)
+
+		}
+
+		if templateError != nil {
+			break
+		}
+	}
+
+	return templates, tempFiles, templateError
 }

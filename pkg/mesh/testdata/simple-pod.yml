@@ -1,7 +1,7 @@
 version: '3.5'
 services:
 
-  app:
+  default:
     x-podlike:
       pod:
         inline: |

@@ -5,13 +5,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/rycus86/docker-filter/pkg/connect"
-	"github.com/rycus86/podlike/pkg/template"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"runtime/debug"
-	"strings"
 )
 
 func setupFilters(proxy *connect.Proxy, templateFiles ...string) {
@@ -96,79 +91,8 @@ func filterServiceCreate(templateFiles ...string) connect.RequestFilterFunc {
 				}
 			}
 
-			name := req.Name
-			req.Name = "app"
-			svc := convertSwarmSpecToComposeService(req)
-
-			// TODO this might need caching to download remote templates
-			// TODO also timeouts, retries, etc.
-			tmplFiles, tempFiles, err := ensureTemplateFiles(templateFiles)
-			defer func() {
-				for _, tf := range tempFiles {
-					os.Remove(tf)
-				}
-			}()
-
-			if err != nil {
-				panic(err)
-			}
-
-			ts := template.NewSession(tmplFiles...)
-			ts.ReplaceService(&svc)
-			ts.Execute()
-			ts.Project.Services[0].Name = name
-
-			mergeComposeServiceIntoSwarmSpec(&ts.Project.Services[0], req)
+			processService(req, templateFiles...)
 
 			return req
 		})
-}
-
-func ensureTemplateFiles(templateFiles []string) ([]string, []string, error) {
-	var templates []string
-	var tempFiles []string
-	var templateError error
-
-	for _, tmpl := range templateFiles {
-		if fi, err := os.Stat(tmpl); err == nil && !fi.IsDir() {
-			templates = append(templates, tmpl)
-			continue
-		}
-
-		// TODO maybe the template engine should support URLs directly
-		if strings.HasPrefix(strings.ToLower(tmpl), "http://") ||
-			strings.HasPrefix(strings.ToLower(tmpl), "https://") {
-
-			if resp, err := http.Get(tmpl); err != nil {
-				templateError = fmt.Errorf("failed to fetch a template from %s: %s", tmpl, err)
-			} else if resp.StatusCode != 200 {
-				resp.Body.Close()
-				templateError = fmt.Errorf("failed to fetch a template from %s: HTTP %d", tmpl, resp.StatusCode)
-			} else if f, err := ioutil.TempFile("", "podlike.mesh.*.yml"); err != nil {
-				resp.Body.Close()
-
-				templateError = fmt.Errorf("failed to create a temporary file for %s: %s", tmpl, err)
-			} else if _, err := io.Copy(f, resp.Body); err != nil {
-				os.Remove(f.Name())
-				resp.Body.Close()
-
-				templateError = fmt.Errorf("failed to write temporary file at %s for %s: %s", f.Name(), tmpl, err)
-			} else {
-				resp.Body.Close()
-
-				templates = append(templates, f.Name())
-				tempFiles = append(tempFiles, f.Name())
-			}
-
-		} else {
-			templateError = fmt.Errorf("template not found at %s", tmpl)
-
-		}
-
-		if templateError != nil {
-			break
-		}
-	}
-
-	return templates, tempFiles, templateError
 }

@@ -1,10 +1,26 @@
 version: '3'
 services:
 
-  app:
+  default:
     x-podlike:
-#      pod:
-#        inline: |
-#          pod:
-#            labels:
-#              podlike.mesh.template: testing
+      pod:
+        inline: |
+          pod:
+            labels:
+              test.podlike.mesh.template: testing
+
+  web:
+    x-podlike:
+      templates:
+        - inline: |
+            nginx:
+              image: nginx
+
+  logger:
+    x-podlike:
+      templates:
+        - inline: |
+            logging:
+              image: fluent/fluent-bit
+              command: >
+                /fluent-bit/bin/fluent-bit -i cpu -o stdout

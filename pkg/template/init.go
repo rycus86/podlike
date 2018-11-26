@@ -69,7 +69,13 @@ func NewSession(inputFiles ...string) *transformSession {
 }
 
 func (ts *transformSession) ReplaceService(svc *types.ServiceConfig) {
-	ts.Project.Services = types.Services{*svc}
+	for idx, s := range ts.Project.Services {
+		if s.Name == svc.Name {
+			ts.Project.Services[idx] = *svc
+			break
+		}
+	}
+
 	cfg := ts.Configurations[svc.Name]
 	cfg.Service = svc
 	ts.Configurations[svc.Name] = cfg
