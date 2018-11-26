@@ -14,13 +14,20 @@ type Proxy struct {
 	handlers  []*handler
 
 	idx int
+
+	nonManagedResponses []string
 }
 
-type FilterFunc func(req *http.Request, body []byte) (*http.Request, error)
+type RequestFilterFunc func(req *http.Request, body []byte) (*http.Request, error)
+type ResponseFilterFunc func(resp *http.Response, body []byte) (*http.Response, error)
+
+type FilterFunc RequestFilterFunc
 
 type handler struct {
 	pattern *regexp.Regexp
-	filter  FilterFunc
+
+	requestFilter  RequestFilterFunc
+	responseFilter ResponseFilterFunc
 }
 
 type localListener struct {
@@ -44,7 +51,8 @@ type connectionPair struct {
 
 	logPrefix string
 
-	closeAfterResponse bool
+	upgraded      bool
+	latestRequest *http.Request
 }
 
 type pollResult struct {
