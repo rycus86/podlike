@@ -61,7 +61,8 @@ func mergeComposeServiceIntoSwarmSpec(svc *types.ServiceConfig, spec *swarm.Serv
 	//✓		//WorkingDir      string                           `mapstructure:"working_dir" yaml:"working_dir,omitempty"`
 	//✓		//Isolation       string                           `mapstructure:"isolation" yaml:"isolation,omitempty"`
 
-	spec.Name = svc.Name
+	//spec.Name = svc.Name  // TODO do not change the service name
+
 	spec.TaskTemplate.ContainerSpec.Args = svc.Command
 	spec.TaskTemplate.ContainerSpec.Configs = composeConfigsToSwarm(svc)
 	spec.TaskTemplate.ContainerSpec.DNSConfig = &swarm.DNSConfig{

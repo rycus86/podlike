@@ -70,63 +70,38 @@ func processService(spec *swarm.ServiceSpec, templateFiles ...string) {
 		panic(err)
 	}
 
-	ts := template.NewSession(tmplFiles...) // TODO maybe this needs to be told not to add default pod/transformers just yet
-	tc := template.TC{
-		Args: map[string]interface{}{},
-	}
+	ts := template.NewSession(tmplFiles...)
+	tc := template.NewTransformConfiguration()
 
-	for _, templateName := range strings.Split(spec.Labels["podlike.mesh.templates"], ",") {
+	requestedTemplates := strings.TrimSpace(spec.Labels["podlike.mesh.templates"])
+
+	for _, templateName := range strings.Split(requestedTemplates, ",") {
 		tName := strings.TrimSpace(templateName)
 		if len(tName) == 0 {
-			tName = "default"
+			if requestedTemplates != "" {
+				continue // most likely just a whitespace issue
+			} else if _, ok := ts.Configurations["default"]; ok {
+				tName = "default"
+			} else {
+				continue // no default template present
+			}
 		}
 
 		if cfg, ok := ts.Configurations[tName]; !ok {
 			continue // skip non-existing configuration
 		} else {
-			for _, pod := range cfg.Pod {
-				if pod.IsDefault { // TODO
-					continue
-				}
-
-				tc.Pod = append(tc.Pod, pod)
-			}
-
-			for _, transformer := range cfg.Transformer {
-				if transformer.IsDefault { // TODO
-					continue
-				}
-
-				tc.Transformer = append(tc.Transformer, transformer)
-			}
-
-			tc.Init = append(tc.Init, cfg.Init...)
-			tc.Templates = append(tc.Templates, cfg.Templates...)
-			tc.Copy = append(tc.Copy, cfg.Copy...)
-
-			for key, value := range cfg.Args {
-				tc.Args[key] = value // TODO merge rules?
-			}
+			tc.MergeFrom(cfg)
 		}
 	}
 
-	name := spec.Name
-
-	spec.Name = "$svc"
 	svc := convertSwarmSpecToComposeService(spec)
 
-	tc.Service = &svc
-	ts.TODO_Set(spec.Name, tc) // TODO
-	ts.Project.Services = append(ts.Project.Services, svc)
-
+	ts.TODO_Replace(svc, tc)
 	ts.Execute()
 
-	changed := findServiceByName(ts.Project.Services, spec.Name)
-	changed.Name = name
+	changed := findServiceByName(ts.Project.Services, svc.Name)
 
 	mergeComposeServiceIntoSwarmSpec(changed, spec)
-
-	spec.Name = name
 }
 
 func findServiceByName(services types.Services, name string) *types.ServiceConfig {

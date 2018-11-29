@@ -62,7 +62,7 @@ func convertSwarmSpecToComposeService(spec *swarm.ServiceSpec) types.ServiceConf
 	//✓		//Isolation       string                           `mapstructure:"isolation" yaml:"isolation,omitempty"`
 
 	return types.ServiceConfig{
-		Name:            spec.Name,
+		Name:            "$svc", // TODO use a fixed name instead of `spec.Name`
 		Command:         types.ShellCommand(spec.TaskTemplate.ContainerSpec.Args),
 		Configs:         swarmConfigsToCompose(spec.TaskTemplate.ContainerSpec.Configs),
 		CredentialSpec:  swarmCredentialsSpecToCompose(spec.TaskTemplate.ContainerSpec.Privileges),
