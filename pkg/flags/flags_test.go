@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -22,7 +23,10 @@ func TestDocs_ReadmeIsUpToDate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(readmeData), output.Text) {
+	readmeStr := regexp.MustCompile("[\t ]+").ReplaceAllString(string(readmeData), " ")
+	outputStr := regexp.MustCompile("[\t ]+").ReplaceAllString(output.Text, " ")
+
+	if !strings.Contains(readmeStr, outputStr) {
 		t.Error("The command like usage is not found in the README")
 		fmt.Println(output.Text)
 	}

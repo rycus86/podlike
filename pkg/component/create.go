@@ -191,7 +191,6 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 		Resources: resources,
 
 		Cgroup:      container.CgroupSpec("container:" + c.client.GetContainerID()),
-		IpcMode:     container.IpcMode("container:" + c.client.GetContainerID()),
 		NetworkMode: container.NetworkMode("container:" + c.client.GetContainerID()),
 
 		Privileged:     c.Privileged,
@@ -280,6 +279,10 @@ func (c *Component) newHostConfig(configuration *config.Configuration) (*contain
 
 	if configuration.SharePids {
 		hostConfig.PidMode = container.PidMode("container:" + c.client.GetContainerID())
+	}
+
+	if configuration.ShareIpc {
+		hostConfig.IpcMode = container.IpcMode("container:" + c.client.GetContainerID())
 	}
 
 	if configuration.ShareVolumes {

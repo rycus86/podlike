@@ -19,12 +19,12 @@ They can also share the same volumes, and can also see each other's PIDs, so sen
 These are always shared:
 
 - Cgroup
-- IPC namespace
 - Network namespace
 
 By default, these are also shared, but optional:
 
 - PID namespace
+- IPC namespace
 - Volumes
 
 *Check out the [blog post](https://blog.viktoradam.net/2018/05/14/podlike/) for a much more detailed introduction!*
@@ -317,14 +317,16 @@ The application supports these command line flags, that you can pass to containe
 
 ```
 Usage of /podlike:
+  -ipc
+        Enable (default) or disable IPC sharing (default true)
   -logs
-    	Stream logs from the components
+        Stream logs from the components
   -pids
-    	Enable (default) or disable PID sharing (default true)
+        Enable (default) or disable PID sharing (default true)
   -pull
-    	Always pull the images for the components when starting
+        Always pull the images for the components when starting
   -volumes
-    	Enable volume sharing from the controller
+        Enable volume sharing from the controller
 ```
 
 Alternatively, the `healthcheck` argument starts a one-off run that returns the current health status of the app running in the same container. Check the [Dockerfile](Dockerfile) and the [healthcheck/client.go](https://github.com/rycus86/podlike/blob/master/healthcheck/client.go) source code to see how this works.
