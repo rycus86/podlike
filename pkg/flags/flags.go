@@ -20,7 +20,7 @@ func init() {
 
 func setupVariables() {
 	flag.BoolVar(&pids, "pids", true, "Enable (default) or disable PID sharing")
-	flag.BoolVar(&pids, "ipc", true, "Enable (default) or disable IPC sharing")
+	flag.BoolVar(&ipc, "ipc", true, "Enable (default) or disable IPC sharing")
 	flag.BoolVar(&volumes, "volumes", false, "Enable volume sharing from the controller")
 	flag.BoolVar(&logs, "logs", false, "Stream logs from the components")
 	flag.BoolVar(&pull, "pull", false, "Always pull the images for the components when starting")
