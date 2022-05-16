@@ -57,15 +57,16 @@ github.com/xeipuuv/gojsonpointer
 github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v0.0.0-20170528113821-0c8571ac0ce1
 github.com/xeipuuv/gojsonschema
-# golang.org/x/crypto v0.0.0-20180602220124-df8d4716b347
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20180418062111-d41e8174641f
+# golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/sys v0.0.0-20180418212419-3ccc7e577979
+# golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/yaml.v2 v2.2.1
+# gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
