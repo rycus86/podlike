@@ -2,13 +2,37 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	docker "github.com/docker/docker/client"
+	"io/ioutil"
 	"time"
+
+	docker "github.com/docker/docker/client"
+	"github.com/rycus86/podlike/pkg/config"
 )
 
+func getRegistryAuth(filename string) *config.RegistryAuth {
+	contents, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		return &config.RegistryAuth{}
+	}
+
+	var auth config.RegistryAuth
+
+	if err := json.Unmarshal(contents, &auth); err != nil {
+		fmt.Println("[warning] Could not unmarshal auth file: ", err)
+		return &config.RegistryAuth{}
+	}
+
+	return &auth
+}
+
 func NewEngineWithDockerClient(client *docker.Client) *Engine {
-	return &Engine{api: client}
+	return &Engine{
+		api:  client,
+		auth: getRegistryAuth("/var/run/secrets/podlike/dockerregistryauth.json"),
+	}
 }
 
 func NewEngine() (*Engine, error) {
