@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20180419201305-e396b27b7f20
 	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-units v0.3.3
-	github.com/gogo/protobuf v1.0.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/imdario/mergo v0.3.4 // indirect
