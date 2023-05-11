@@ -8,8 +8,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/cli v0.0.0-20180601213240-2014e991ee3f h1:PJlxB4HUgPT9JeRekNro/sOdMfNRipgXuVgJuMrym5I=
 github.com/docker/cli v0.0.0-20180601213240-2014e991ee3f/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
-github.com/docker/distribution v2.6.0-rc.1.0.20180327202408-83389a148052+incompatible h1:W1rhCpxfWMU0CaZSFWpmWfmB68zYZVksig+VC1ZbgI4=
-github.com/docker/distribution v2.6.0-rc.1.0.20180327202408-83389a148052+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
+github.com/docker/distribution v2.8.2-beta.1+incompatible h1:gILO60VLD2v28ozemv4aAwDb8ds5U2O/vD/sBXbd7Rw=
+github.com/docker/distribution v2.8.2-beta.1+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
 github.com/docker/docker v1.4.2-0.20180419201305-e396b27b7f20 h1:5GagFQ3/WRTj/n+L0r2+YzeJHfuvwZFfFmO6Kk+jPKg=
 github.com/docker/docker v1.4.2-0.20180419201305-e396b27b7f20/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/go-connections v0.3.0 h1:3lOnM9cSzgGwx8VfK/NGOW5fLQ0GjIlCkaktF+n1M6o=

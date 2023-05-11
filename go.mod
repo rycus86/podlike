@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/Microsoft/go-winio v0.4.7 // indirect
 	github.com/docker/cli v0.0.0-20180601213240-2014e991ee3f
-	github.com/docker/distribution v2.6.0-rc.1.0.20180327202408-83389a148052+incompatible // indirect
+	github.com/docker/distribution v2.8.2-beta.1+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20180419201305-e396b27b7f20
 	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-units v0.3.3

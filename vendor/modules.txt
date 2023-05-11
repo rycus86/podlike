@@ -7,7 +7,7 @@ github.com/docker/cli/cli/compose/schema
 github.com/docker/cli/cli/compose/template
 github.com/docker/cli/cli/compose/types
 github.com/docker/cli/opts
-# github.com/docker/distribution v2.6.0-rc.1.0.20180327202408-83389a148052+incompatible
+# github.com/docker/distribution v2.8.2-beta.1+incompatible
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 # github.com/docker/docker v1.4.2-0.20180419201305-e396b27b7f20
